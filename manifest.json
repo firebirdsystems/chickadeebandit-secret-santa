@@ -1,0 +1,68 @@
+{
+  "id": "secret-santa",
+  "name": "Secret Santa",
+  "version": "1.0.0",
+  "description": "Gift exchanges with a truly secret draw — assignments are masked with column read ACLs so nobody, adults included, can peek at who has whom. Budgets, gift hints, private idea notes, wishlist hop, and an optional post-exchange reveal.",
+  "entrypoint": "index.html",
+  "runtime": "static",
+  "category": "family",
+  "tags": ["gifts", "secret santa", "gift exchange", "holidays", "office party"],
+  "data_access": {
+    "reads": ["family.members"],
+    "writes": []
+  },
+  "permissions": {
+    "default_audience": "everyone",
+    "requires_approval": false
+  },
+  "storage": "db",
+  "db_plaintext_columns": ["exchange_date", "visibility"],
+  "row_policies": {
+    "exchanges": {
+      "kind": "adult_writable"
+    },
+    "participants": {
+      "kind": "owner_or_visibility",
+      "member_column": "member_id",
+      "visibility_column": "visibility",
+      "everyone_values": ["everyone"],
+      "write_owner_only": true,
+      "unique_per_member": {
+        "member_column": "member_id",
+        "scope_columns": ["exchange_id"]
+      }
+    },
+    "assignments": {
+      "kind": "adult_writable",
+      "member_read_column": "giver_id",
+      "column_read_acls": {
+        "receiver_id": { "visible_to": ["owner"] }
+      }
+    },
+    "gift_notes": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": false,
+      "unique_per_member": {
+        "member_column": "member_id",
+        "scope_columns": ["exchange_id"]
+      }
+    },
+    "reveals": {
+      "kind": "owner_or_visibility",
+      "member_column": "giver_id",
+      "visibility_column": "visibility",
+      "everyone_values": ["everyone"],
+      "write_owner_only": true,
+      "unique_per_member": {
+        "member_column": "giver_id",
+        "scope_columns": ["exchange_id"]
+      }
+    }
+  },
+  "nav": { "label": "Secret Santa" },
+  "resource_limits": {
+    "max_db_bytes": 10485760
+  },
+  "icon": "🎅"
+}

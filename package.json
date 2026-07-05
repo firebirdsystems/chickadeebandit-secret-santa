@@ -1,0 +1,16 @@
+{
+  "name": "secret-santa",
+  "version": "1.0.0",
+  "description": "Chickadee Bandit app — Secret Santa / Gift Exchange",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node dev.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
