@@ -43,16 +43,6 @@ CREATE TABLE IF NOT EXISTS app_secret_santa__gift_notes (
   updated_at  TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS app_secret_santa__reveals (
-  id          TEXT PRIMARY KEY,
-  exchange_id TEXT NOT NULL,
-  giver_id    TEXT NOT NULL,
-  receiver_id TEXT NOT NULL,
-  visibility  TEXT NOT NULL DEFAULT 'everyone',
-  created_at  TEXT NOT NULL
-);
-
 CREATE INDEX IF NOT EXISTS ss_participants_exchange ON app_secret_santa__participants(exchange_id);
 CREATE INDEX IF NOT EXISTS ss_assignments_exchange  ON app_secret_santa__assignments(exchange_id);
 CREATE INDEX IF NOT EXISTS ss_gift_notes_exchange   ON app_secret_santa__gift_notes(exchange_id);
-CREATE INDEX IF NOT EXISTS ss_reveals_exchange      ON app_secret_santa__reveals(exchange_id);

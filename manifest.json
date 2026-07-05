@@ -1,8 +1,8 @@
 {
   "id": "secret-santa",
   "name": "Secret Santa",
-  "version": "1.0.0",
-  "description": "Gift exchanges with a truly secret draw — assignments are masked with column read ACLs so nobody, adults included, can peek at who has whom. Budgets, gift hints, private idea notes, wishlist hop, and an optional post-exchange reveal.",
+  "version": "1.1.0",
+  "description": "Gift exchanges with a truly secret draw — names are matched on the server, so nobody, the organizer included, can peek at who has whom. Budgets, gift hints, private idea notes, wishlist hop, and a one-tap full reveal.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "family",
@@ -33,11 +33,13 @@
       }
     },
     "assignments": {
-      "kind": "adult_writable",
-      "member_read_column": "giver_id",
-      "column_read_acls": {
-        "receiver_id": { "visible_to": ["owner"] }
-      }
+      "kind": "sealed_until",
+      "fk_column": "exchange_id",
+      "parent_table": "exchanges",
+      "writer_column": "giver_id",
+      "parent_status_column": "status",
+      "visible_parent_status_values": ["revealed"],
+      "endpoint_writes_only": true
     },
     "gift_notes": {
       "kind": "owner_only",
@@ -47,18 +49,23 @@
         "member_column": "member_id",
         "scope_columns": ["exchange_id"]
       }
-    },
-    "reveals": {
-      "kind": "owner_or_visibility",
-      "member_column": "giver_id",
-      "visibility_column": "visibility",
-      "everyone_values": ["everyone"],
-      "write_owner_only": true,
-      "unique_per_member": {
-        "member_column": "giver_id",
-        "scope_columns": ["exchange_id"]
-      }
     }
+  },
+  "secret_draw": {
+    "parent_table": "exchanges",
+    "parent_status_column": "status",
+    "draw_status_values": ["open", "drawn"],
+    "drawn_status_value": "drawn",
+    "drawn_at_column": "drawn_at",
+    "participant_table": "participants",
+    "participant_scope_column": "exchange_id",
+    "participant_member_column": "member_id",
+    "assignments_table": "assignments",
+    "assignment_scope_column": "exchange_id",
+    "giver_column": "giver_id",
+    "receiver_column": "receiver_id",
+    "created_at_column": "created_at",
+    "write_acl": { "require_role": "adult" }
   },
   "nav": { "label": "Secret Santa" },
   "resource_limits": {

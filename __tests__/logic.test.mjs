@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildAssignments,
   drawError,
   canManageExchange,
   canJoin,
@@ -14,54 +13,9 @@ import {
 const adult = { id: "a1", name: "Alex", role: "adult" };
 const child = { id: "c1", name: "Casey", role: "child" };
 
-describe("buildAssignments (Sattolo cycle)", () => {
-  const ids = ["m1", "m2", "m3", "m4", "m5"];
-
-  it("never assigns anyone to themself", () => {
-    for (let run = 0; run < 200; run++) {
-      for (const { giver_id, receiver_id } of buildAssignments(ids)) {
-        expect(giver_id).not.toBe(receiver_id);
-      }
-    }
-  });
-
-  it("every participant gives exactly once and receives exactly once", () => {
-    for (let run = 0; run < 50; run++) {
-      const pairs = buildAssignments(ids);
-      expect(pairs.map(p => p.giver_id).sort()).toEqual([...ids].sort());
-      expect(pairs.map(p => p.receiver_id).sort()).toEqual([...ids].sort());
-    }
-  });
-
-  it("forms a single cycle covering all participants", () => {
-    const pairs = buildAssignments(ids);
-    const next = new Map(pairs.map(p => [p.giver_id, p.receiver_id]));
-    const seen = new Set();
-    let cur = ids[0];
-    while (!seen.has(cur)) { seen.add(cur); cur = next.get(cur); }
-    expect(seen.size).toBe(ids.length);
-  });
-
-  it("handles exactly two participants (mutual exchange)", () => {
-    const pairs = buildAssignments(["m1", "m2"]);
-    expect(pairs).toHaveLength(2);
-    for (const p of pairs) expect(p.giver_id).not.toBe(p.receiver_id);
-  });
-
-  it("is deterministic under a seeded rng", () => {
-    const rng = () => 0;
-    expect(buildAssignments(["a", "b", "c"], rng)).toEqual(buildAssignments(["a", "b", "c"], rng));
-  });
-
-  it("throws for fewer than two participants", () => {
-    expect(() => buildAssignments([])).toThrow();
-    expect(() => buildAssignments(["m1"])).toThrow();
-  });
-
-  it("throws for duplicate participants", () => {
-    expect(() => buildAssignments(["m1", "m1", "m2"])).toThrow();
-  });
-});
+// The draw itself (Sattolo derangement) lives in the hub's secret_draw
+// endpoint — computing it client-side would hand the organizer's browser the
+// full pairing. See packages/hub __tests__/unit/secret-draw.test.ts.
 
 describe("drawError", () => {
   it("rejects short and duplicate lists, accepts valid ones", () => {
@@ -104,8 +58,8 @@ describe("myAssignment", () => {
     expect(myAssignment(exchange, rows, child)?.receiver_id).toBe("m9");
   });
 
-  it("ignores rows whose receiver_id was masked to null by column_read_acls", () => {
-    const rows = [{ id: "a", exchange_id: "e1", giver_id: "a1", receiver_id: null }];
+  it("ignores other members' rows (visible post-reveal under sealed_until)", () => {
+    const rows = [{ id: "a", exchange_id: "e1", giver_id: "c1", receiver_id: "m9" }];
     expect(myAssignment(exchange, rows, adult)).toBeNull();
   });
 });

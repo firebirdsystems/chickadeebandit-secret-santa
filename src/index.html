@@ -103,7 +103,7 @@
     import {
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
-      buildAssignments, drawError, statusLabel, fmtBudget, parseBudgetInput,
+      drawError, statusLabel, fmtBudget, parseBudgetInput,
     } from "./logic.js";
 
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -116,11 +116,10 @@
       participants: "app_secret_santa__participants",
       assignments:  "app_secret_santa__assignments",
       giftNotes:    "app_secret_santa__gift_notes",
-      reveals:      "app_secret_santa__reveals",
     };
 
     let members = [], memberMap = new Map();
-    let exchanges = [], participants = [], assignments = [], reveals = [], giftNotes = [];
+    let exchanges = [], participants = [], assignments = [], giftNotes = [];
     let currentExchangeId = null;
     let modalEl = null;
     const demo = !DB;
@@ -168,25 +167,31 @@
           visibility: "everyone", hint: i === 2 ? "Loves dinosaurs and LEGO" : null,
           created_at: new Date().toISOString(),
         }));
-        assignments = []; reveals = []; giftNotes = [];
+        assignments = []; giftNotes = [];
         return;
       }
-      const [x, p, a, r, n] = await Promise.all([
+      const [x, p, a, n] = await Promise.all([
         db(`SELECT * FROM ${T.exchanges} ORDER BY created_at DESC`),
         db(`SELECT * FROM ${T.participants}`),
+        // sealed_until: only my own rows until an exchange is revealed, then all of its rows.
         db(`SELECT * FROM ${T.assignments}`),
-        db(`SELECT * FROM ${T.reveals}`),
         db(`SELECT * FROM ${T.giftNotes}`), // owner_only: returns only my own notes
       ]);
       exchanges = x.rows; participants = p.rows;
-      assignments = a.rows; reveals = r.rows; giftNotes = n.rows;
+      assignments = a.rows; giftNotes = n.rows;
+    }
+
+    async function refreshAssignments() {
+      if (demo) return;
+      const a = await db(`SELECT * FROM ${T.assignments}`);
+      assignments = a.rows;
     }
 
     // ── State-bound wrappers around pure logic ───────────────────────────────
     const canManage = () => _canManage(ME);
     const exchangeById = id => exchanges.find(x => x.id === id) ?? null;
     const participantsOf = x => participants.filter(p => p.exchange_id === x.id);
-    const revealsOf = x => reveals.filter(r => r.exchange_id === x.id);
+    const assignmentsOf = x => assignments.filter(a => a.exchange_id === x.id);
     const myNote = x => giftNotes.find(n => n.exchange_id === x.id && n.member_id === ME?.id) ?? null;
 
     function memberName(id) { return memberMap.get(id)?.name ?? "Former member"; }
@@ -329,9 +334,13 @@
     };
 
     // ── The draw ─────────────────────────────────────────────────────────────
+    // Names are matched by the hub's secret_draw endpoint. The pairing is
+    // computed and stored entirely server-side — it never exists in this (or
+    // any) browser, so not even the organizer running the draw can see it.
     window.runDraw = async function(exchangeId, isRedraw) {
       const x = exchangeById(exchangeId);
       if (!x || !canManage()) return;
+      if (demo) { hubAlert("Demo mode — install in your hub to run a real draw."); return; }
       const ids = participantsOf(x).map(p => p.member_id);
       const err = drawError(ids);
       if (err) { hubAlert(err); return; }
@@ -340,34 +349,32 @@
         message: isRedraw ? "Re-draw all names?" : `Draw names for ${ids.length} participants?`,
         description: isRedraw
           ? "Existing assignments will be discarded and everyone gets a new person."
-          : "Names are matched randomly right now and stored so that only each giver can see who they got — nobody else, including you.",
+          : "Names are matched on the server and stored so that only each giver can see who they got — nobody else, including you.",
         confirmLabel: isRedraw ? "Re-draw" : "Draw names",
       });
       if (!ok) return;
 
       try {
-        if (isRedraw) await db(`DELETE FROM ${T.assignments} WHERE exchange_id = ?`, [exchangeId]);
-        // The pairing exists only inside this function and is never rendered.
-        const pairs = buildAssignments(ids);
-        const now = new Date().toISOString();
-        for (const pair of pairs) {
-          await db(`INSERT INTO ${T.assignments} (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, ?)`,
-            [crypto.randomUUID(), exchangeId, pair.giver_id, pair.receiver_id, now]);
+        const res = await fetch("api/secret-draw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope_id: exchangeId }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (json.reason === "not_enough_participants") throw new Error("At least 2 participants who are still household members are needed.");
+          if (json.reason === "draw_closed") throw new Error("This exchange can no longer be drawn.");
+          throw new Error(json.error || `Draw failed (${res.status})`);
         }
-        await db(`UPDATE ${T.exchanges} SET status = 'drawn', drawn_at = ? WHERE id = ?`, [now, exchangeId]);
 
         const i = exchanges.findIndex(e => e.id === exchangeId);
-        if (i !== -1) exchanges[i] = { ...exchanges[i], status: "drawn", drawn_at: now };
-        // Mirror what the server would return to this caller: every receiver
-        // masked except our own row.
-        assignments = [
-          ...assignments.filter(a => a.exchange_id !== exchangeId),
-          ...pairs.map(p => ({
-            id: crypto.randomUUID(), exchange_id: exchangeId, giver_id: p.giver_id,
-            receiver_id: p.giver_id === ME?.id ? p.receiver_id : null, created_at: now,
-          })),
-        ];
+        if (i !== -1) exchanges[i] = { ...exchanges[i], status: "drawn", drawn_at: new Date().toISOString() };
+        // Pick up my own assignment row — the only one the server lets me read.
+        await refreshAssignments();
         render();
+        if (json.excluded_member_ids?.length) {
+          hubAlert(`${json.excluded_member_ids.length} participant(s) who left the household were skipped.`);
+        }
         logHubActivity("draw_completed", `The hat was drawn for "${x.title}" 🎩`, exchangeId);
         notify(`🎩 Names are drawn for ${x.title}!`, "Open Secret Santa to see who you got. Shhh!", ids, exchangeId);
       } catch (e) {
@@ -376,12 +383,15 @@
     };
 
     // ── Reveal / archive / delete ────────────────────────────────────────────
+    // Flipping the status to 'revealed' releases the sealed_until policy on the
+    // assignments table itself: everyone immediately reads the authoritative
+    // pairings — nothing is self-reported, and nothing waits on other members.
     window.revealExchange = async function(exchangeId) {
       const x = exchangeById(exchangeId);
       if (!x || !canManage()) return;
       const ok = await hubConfirm({
         message: "Reveal who had whom?",
-        description: "As each participant next opens the app, their pairing is published for everyone to see. This can't be undone.",
+        description: "Everyone immediately sees all the pairings. This can't be undone.",
         confirmLabel: "Reveal",
       });
       if (!ok) return;
@@ -390,27 +400,11 @@
         await db(`UPDATE ${T.exchanges} SET status = 'revealed', revealed_at = ? WHERE id = ?`, [now, exchangeId]);
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "revealed", revealed_at: now };
-        await publishMyReveal(exchanges[i]);
+        await refreshAssignments();
         render();
         notify(`🎉 The big reveal: ${x.title}`, "Come see who had whom!", participantsOf(x).map(p => p.member_id), exchangeId);
       } catch (e) { hubAlert("Couldn't reveal.", { description: e.message }); }
     };
-
-    // Each giver publishes their own pairing once the exchange is revealed —
-    // the only pairing they can read (and reveals INSERTs are forced to the caller).
-    async function publishMyReveal(x) {
-      if (demo || !ME || !x || x.status !== "revealed") return;
-      const mine = _myAssignment(x, assignments, ME);
-      if (!mine) return;
-      if (revealsOf(x).some(r => r.giver_id === ME.id)) return;
-      try {
-        const id = crypto.randomUUID();
-        const now = new Date().toISOString();
-        await db(`INSERT INTO ${T.reveals} (id, exchange_id, giver_id, receiver_id, visibility, created_at) VALUES (?, ?, ?, ?, 'everyone', ?)`,
-          [id, x.id, ME.id, mine.receiver_id, now]);
-        reveals = [...reveals, { id, exchange_id: x.id, giver_id: ME.id, receiver_id: mine.receiver_id, visibility: "everyone", created_at: now }];
-      } catch { /* unique_per_member duplicate or transient — non-fatal */ }
-    }
 
     window.archiveExchange = async function(exchangeId) {
       if (!canManage()) return;
@@ -434,7 +428,17 @@
       });
       if (!ok) return;
       try {
-        await db(`DELETE FROM ${T.assignments} WHERE exchange_id = ?`, [exchangeId]);
+        // Assignments are endpoint-written; app SQL can't touch them. The clear
+        // endpoint also works if the exchange row is already gone (orphan cleanup).
+        const res = await fetch("api/secret-draw/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope_id: exchangeId }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || `Cleanup failed (${res.status})`);
+        }
         await db(`DELETE FROM ${T.exchanges} WHERE id = ?`, [exchangeId]);
         exchanges = exchanges.filter(e => e.id !== exchangeId);
         assignments = assignments.filter(a => a.exchange_id !== exchangeId);
@@ -473,11 +477,9 @@
       window.parent.postMessage({ type: "hub:open", appId: "wishlist", params: {} }, "*");
     };
 
-    window.openExchange = async function(id) {
+    window.openExchange = function(id) {
       currentExchangeId = id;
       render();
-      const x = exchangeById(id);
-      if (x?.status === "revealed") { await publishMyReveal(x); render(); }
     };
     window.goBack = function() { currentExchangeId = null; render(); };
 
@@ -550,7 +552,7 @@
         </div>
 
         ${renderAssignmentCard(x, mine)}
-        ${x.status === "revealed" ? renderReveals(x, ps) : ""}
+        ${x.status === "revealed" ? renderReveals(x) : ""}
 
         <div class="section-title">Participants (${ps.length})</div>
         <div class="card">
@@ -589,7 +591,7 @@
               ${x.status !== "archived" ? `<button class="btn ghost" onclick="archiveExchange('${x.id}')">Archive</button>` : ""}
               <button class="btn danger" onclick="deleteExchange('${x.id}')">Delete</button>
             </div>
-            ${x.status === "open" ? `<p class="meta" style="margin-top:10px">Assignments are stored so each person can only ever read their own — no one (you included) can query who has whom.</p>` : ""}
+            ${x.status === "open" ? `<p class="meta" style="margin-top:10px">Names are matched on the server and each person can only ever read their own — no one (you included) can see who has whom.</p>` : ""}
           </div>` : ""}
       `;
     }
@@ -618,19 +620,18 @@
         </div>`;
     }
 
-    function renderReveals(x, ps) {
-      const rs = revealsOf(x);
-      const published = new Set(rs.map(r => r.giver_id));
-      const waiting = ps.filter(p => !published.has(p.member_id));
+    // Post-reveal, sealed_until returns the authoritative assignment rows to
+    // everyone — the reveal is complete and unforgeable the moment it happens.
+    function renderReveals(x) {
+      const rs = assignmentsOf(x);
       return `
         <div class="section-title">The big reveal 🎉</div>
         <div class="card">
-          ${rs.length === 0 ? `<p class="meta">No pairings published yet.</p>` : rs.map(r => `
+          ${rs.length === 0 ? `<p class="meta">No pairings to show. Try refreshing.</p>` : rs.map(r => `
             <div class="reveal-row">
               ${avatarHtml(r.giver_id)}
               <span><strong>${esc(memberName(r.giver_id))}</strong> was Santa for <strong>${esc(memberName(r.receiver_id))}</strong></span>
             </div>`).join("")}
-          ${waiting.length ? `<p class="meta" style="margin-top:10px">Waiting on ${esc(waiting.map(p => memberName(p.member_id)).join(", "))} — their pairing appears when they next open the app.</p>` : ""}
         </div>`;
     }
 
@@ -646,12 +647,6 @@
         await Promise.all([loadMembers(), loadData()]);
         handleDeepLink();
         render();
-        // Publish this member's pairing for any exchange already revealed.
-        const revealed = exchanges.filter(e => e.status === "revealed");
-        if (revealed.length) {
-          await Promise.all(revealed.map(publishMyReveal));
-          render();
-        }
       } catch (e) {
         document.getElementById("app").innerHTML =
           `<div class="card"><strong>Something went wrong.</strong><p class="meta" style="margin-top:6px">${esc(e.message)}</p></div>`;
