@@ -1,8 +1,11 @@
 -- Secret Santa / Gift Exchange — initial schema
 --
--- assignments.receiver_id is masked by column_read_acls (visible_to: ["owner"])
--- so only the giver can ever read who they drew. gift_notes are owner_only with
--- adults_bypass:false — private even from adults, since a note names the recipient.
+-- assignments is a `sealed_until` table (parent_status_column: status): each giver
+-- reads only their OWN row until the exchange status reaches "revealed", at which
+-- point everyone reads the authoritative rows (the one-tap full reveal). Writes are
+-- endpoint-only — the server-side secret_draw computes the derangement so nobody, the
+-- organizer included, can peek at the pairing before reveal. gift_notes are owner_only
+-- with adults_bypass:false — private even from adults, since a note names the recipient.
 
 CREATE TABLE IF NOT EXISTS app_secret_santa__exchanges (
   id            TEXT PRIMARY KEY,
