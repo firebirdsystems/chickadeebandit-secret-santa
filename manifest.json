@@ -1,5 +1,6 @@
 {
   "id": "secret-santa",
+  "contexts": ["household", "shared_space"],
   "name": "Secret Santa",
   "version": "1.1.0",
   "description": "Gift exchanges with a truly secret draw — names are matched on the server, so nobody, the organizer included, can peek at who has whom. Budgets, gift hints, private idea notes, wishlist hop, and a one-tap full reveal.",
