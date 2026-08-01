@@ -18,6 +18,30 @@
   },
   "storage": "db",
   "db_plaintext_columns": ["exchange_date", "visibility"],
+    "member_references": {
+      "exchanges": {
+        "column": "created_by",
+        "on_removed": "keep"
+      },
+      "participants": {
+        "column": "member_id",
+        "on_removed": "delete"
+      },
+      "assignments": [
+        {
+          "column": "giver_id",
+          "on_removed": "delete"
+        },
+        {
+          "column": "receiver_id",
+          "on_removed": "delete"
+        }
+      ],
+      "gift_notes": {
+        "column": "member_id",
+        "on_removed": "delete"
+      }
+    },
   "row_policies": {
     "exchanges": {
       "kind": "adult_writable"
@@ -53,6 +77,12 @@
         "limit": 1
       }
     }
+  },
+  "delete_cascades": {
+    "exchanges": [
+      { "table": "participants", "foreign_key": "exchange_id" },
+      { "table": "gift_notes", "foreign_key": "exchange_id" }
+    ]
   },
   "secret_draw": {
     "parent_table": "exchanges",

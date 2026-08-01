@@ -430,6 +430,11 @@
       try {
         // Assignments are endpoint-written; app SQL can't touch them. The clear
         // endpoint also works if the exchange row is already gone (orphan cleanup).
+        // Participants and gift notes go with the exchange via manifest
+        // delete_cascades — neither could be deleted here: participants is
+        // write_owner_only and gift_notes is owner_only with adults_bypass off,
+        // so another member's rows were unreachable by anyone once the parent
+        // was gone.
         const res = await fetch("api/secret-draw/clear", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
