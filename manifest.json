@@ -101,6 +101,22 @@
     "write_acl": { "require_role": "adult" }
   },
   "nav": { "label": "Secret Santa" },
+  "agenda": {
+    "kind": "event",
+    "label": "Gift exchange",
+    "source": {
+      "kind": "sql",
+      "query": "SELECT id AS id, title AS title, NULLIF(details, '') AS subtitle, exchange_date AS when_at FROM app_secret_santa__exchanges WHERE exchange_date = :today ORDER BY created_at LIMIT 20"
+    }
+  },
+  "glance": {
+    "source": {
+      "kind": "sql",
+      "query": "SELECT title AS title, exchange_date AS happens_on FROM app_secret_santa__exchanges WHERE exchange_date IS NOT NULL AND exchange_date <> '' AND exchange_date >= :today ORDER BY exchange_date LIMIT 3"
+    },
+    "display": { "template": "list", "title": "title", "when": "happens_on" },
+    "ambient_card": "countdown"
+  },
   "resource_limits": {
     "max_db_bytes": 10485760
   },
