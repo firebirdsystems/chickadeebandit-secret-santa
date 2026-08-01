@@ -93,17 +93,24 @@
     details.archived-list summary { cursor: pointer; color: var(--hub-text-muted, #6b7280); font-size: 0.88rem; margin: 18px 0 10px; }
     .reveal-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--hub-border, #f3f4f6); font-size: 0.92rem; }
     .reveal-row:last-child { border-bottom: none; }
+    .search-row { margin-bottom: 12px; }
+    .search-input {
+      width: 100%; border: 1.5px solid var(--border-mid, var(--border, #d1d5db));
+      border-radius: 8px; padding: 9px 11px; font: inherit;
+      background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
   </style>
 </head>
 <body>
   <div class="container" id="app"><p class="meta">Loading…</p></div>
 
   <script type="module">
-    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl } from "/hub-sdk.js";
+    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl, searchMatch } from "/hub-sdk.js";
     import {
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
-      drawError, statusLabel, fmtBudget, parseBudgetInput,
+      drawError, statusLabel, fmtBudget, parseBudgetInput, searchableFields,
     } from "./logic.js";
 
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -121,6 +128,7 @@
     let members = [], memberMap = new Map();
     let exchanges = [], participants = [], assignments = [], giftNotes = [];
     let currentExchangeId = null;
+let searchQ = "";       // in-app search (see logic.js searchableFields)
     let modalEl = null;
     const demo = !DB;
 
@@ -489,6 +497,16 @@
     window.goBack = function() { currentExchangeId = null; render(); };
 
     // ── Rendering ────────────────────────────────────────────────────────────
+    // render() rewrites the whole view, so put the caret back after typing.
+    document.addEventListener("input", (e) => {
+      if (e.target.id !== "search") return;
+      searchQ = e.target.value;
+      const caret = e.target.selectionStart;
+      render();
+      const next = document.getElementById("search");
+      if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+    });
+
     function render() {
       const app = document.getElementById("app");
       const x = currentExchangeId ? exchangeById(currentExchangeId) : null;
@@ -496,21 +514,27 @@
     }
 
     function renderList() {
-      const active = exchanges.filter(x => x.status !== "archived");
-      const archived = exchanges.filter(x => x.status === "archived");
+      const matched = searchQ ? exchanges.filter(x => searchMatch(searchQ, searchableFields(x))) : exchanges;
+      const active = matched.filter(x => x.status !== "archived");
+      const archived = matched.filter(x => x.status === "archived");
       return `
         ${demo ? `<div class="banner">Demo mode — showing sample data. Install in your hub to run a real exchange.</div>` : ""}
         <div class="row spread">
           <div><h1>🎅 Secret Santa</h1><p class="subtitle">Gift exchanges where the draw stays secret — even from the organizer.</p></div>
           ${canManage() ? `<button class="btn" onclick="openExchangeModal(null)">New exchange</button>` : ""}
         </div>
-        ${active.length === 0 ? `
+        ${exchanges.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search exchanges…" aria-label="Search exchanges" value="${esc(searchQ)}" /></div>` : ""}
+        ${active.length === 0 ? (searchQ && archived.length === 0 ? `
+          <div class="card empty">
+            <div style="font-size:2rem">🔍</div>
+            <p style="margin-top:8px">Nothing matches "${esc(searchQ)}".</p>
+          </div>` : `
           <div class="card empty">
             <div style="font-size:2rem">🎁</div>
             <p style="margin-top:8px">No gift exchanges yet.</p>
             ${canManage() ? `<p class="meta" style="margin-top:4px">Create one and let everyone join before the draw.</p>`
                           : `<p class="meta" style="margin-top:4px">Ask an adult to start one.</p>`}
-          </div>` : active.map(exchangeCard).join("")}
+          </div>`) : active.map(exchangeCard).join("")}
         ${archived.length ? `
           <details class="archived-list">
             <summary>Archived (${archived.length})</summary>

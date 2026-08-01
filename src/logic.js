@@ -72,3 +72,12 @@ export function parseBudgetInput(text) {
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n * 100);
 }
+
+/**
+ * Fields the in-app search matches against (see hub-sdk `searchMatch`).
+ * An exchange is found again by its details — the year, the group,
+ * the budget note — as much as by its title.
+ */
+export function searchableFields(item) {
+  return [item.title, item.details];
+}

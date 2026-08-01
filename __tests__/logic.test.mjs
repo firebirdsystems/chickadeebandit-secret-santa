@@ -7,7 +7,7 @@ import {
   myAssignment,
   statusLabel,
   fmtBudget,
-  parseBudgetInput,
+  parseBudgetInput, searchableFields,
 } from "../src/logic.js";
 
 const adult = { id: "a1", name: "Alex", role: "adult" };
@@ -83,5 +83,12 @@ describe("formatting", () => {
     expect(parseBudgetInput("")).toBeNull();
     expect(parseBudgetInput("-5")).toBeNull();
     expect(parseBudgetInput("abc")).toBeNull();
+  });
+});
+
+describe("searchableFields", () => {
+  it("matches on the details, not just the exchange title", () => {
+    expect(searchableFields({ title: "Christmas", details: "£20 budget, cousins only" }))
+      .toContain("£20 budget, cousins only");
   });
 });
