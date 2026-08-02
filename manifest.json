@@ -100,6 +100,8 @@
     "created_at_column": "created_at",
     "write_acl": { "require_role": "adult" }
   },
+  "publishes": ["secret_santa.exchange_created"],
+  "publish_acls": {"secret_santa.exchange_created": {"require_role": "adult"}},
   "nav": { "label": "Secret Santa" },
   "agenda": {
     "kind": "event",

@@ -125,6 +125,28 @@
       giftNotes:    "app_secret_santa__gift_notes",
     };
 
+    const EVENTS = window.__EVENTS_URL ?? "";
+
+    // Announce a new exchange on the cross-app bus — the date is the useful part
+    // for other apps (put it on the calendar, open a capsule for the day).
+    //
+    // Only the exchange itself is announced. Nothing about the draw ever goes on
+    // the bus: assignments are sealed_until + endpoint_writes_only precisely so
+    // that no client, this one included, can observe who has whom, and an event
+    // is readable by every member with the app.
+    async function publishEvent(type, subjectId, payload = {}) {
+      if (!EVENTS) return;
+      try {
+        await fetch(EVENTS, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, subject_id: subjectId, payload }),
+        });
+      } catch {
+        // Best-effort: the row is already written, so a failed publish is not fatal.
+      }
+    }
+
     let members = [], memberMap = new Map();
     let exchanges = [], participants = [], assignments = [], giftNotes = [];
     let currentExchangeId = null;
@@ -285,6 +307,11 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           currentExchangeId = id;
           logHubActivity("exchange_created", `${ME?.name ?? "Someone"} started a gift exchange: "${title}"`, id);
           notify(`🎁 New gift exchange: ${title}`, "Tap to join before the draw!", "all", id);
+          await publishEvent("secret_santa.exchange_created", id, {
+            title,
+            exchange_date: date,
+            created_by: ME?.id ?? "unknown",
+          });
         }
         closeModal();
         render();
