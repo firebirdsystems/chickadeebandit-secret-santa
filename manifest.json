@@ -1,15 +1,26 @@
 {
   "id": "secret-santa",
-  "contexts": ["household", "shared_space"],
+  "contexts": [
+    "household",
+    "shared_space"
+  ],
   "name": "Secret Santa",
-  "version": "1.1.0",
-  "description": "Gift exchanges with a truly secret draw — names are matched on the server, so nobody, the organizer included, can peek at who has whom. Budgets, gift hints, private idea notes, wishlist hop, and a one-tap full reveal.",
+  "version": "1.2.0",
+  "description": "Gift exchanges with a truly secret draw — names are matched on the server, so nobody, the organizer included, can peek at who has whom. Don’t-pair rules keep couples from drawing each other. Budgets, gift hints, private idea notes, wishlist hop, and a one-tap full reveal.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "family",
-  "tags": ["gifts", "secret santa", "gift exchange", "holidays", "office party"],
+  "tags": [
+    "gifts",
+    "secret santa",
+    "gift exchange",
+    "holidays",
+    "office party"
+  ],
   "data_access": {
-    "reads": ["family.members"],
+    "reads": [
+      "family.members"
+    ],
     "writes": []
   },
   "permissions": {
@@ -17,31 +28,48 @@
     "requires_approval": false
   },
   "storage": "db",
-  "db_plaintext_columns": ["exchange_date", "visibility"],
-    "member_references": {
-      "exchanges": {
-        "column": "created_by",
-        "on_removed": "keep"
-      },
-      "participants": {
-        "column": "member_id",
+  "db_plaintext_columns": [
+    "exchange_date",
+    "visibility"
+  ],
+  "member_references": {
+    "exchanges": {
+      "column": "created_by",
+      "on_removed": "keep"
+    },
+    "participants": {
+      "column": "member_id",
+      "on_removed": "delete"
+    },
+    "assignments": [
+      {
+        "column": "giver_id",
         "on_removed": "delete"
       },
-      "assignments": [
-        {
-          "column": "giver_id",
-          "on_removed": "delete"
-        },
-        {
-          "column": "receiver_id",
-          "on_removed": "delete"
-        }
-      ],
-      "gift_notes": {
-        "column": "member_id",
+      {
+        "column": "receiver_id",
         "on_removed": "delete"
       }
+    ],
+    "gift_notes": {
+      "column": "member_id",
+      "on_removed": "delete"
     },
+    "exclusions": [
+      {
+        "column": "member_a_id",
+        "on_removed": "delete"
+      },
+      {
+        "column": "member_b_id",
+        "on_removed": "delete"
+      },
+      {
+        "column": "created_by",
+        "on_removed": "keep"
+      }
+    ]
+  },
   "row_policies": {
     "exchanges": {
       "kind": "adult_writable"
@@ -50,11 +78,15 @@
       "kind": "owner_or_visibility",
       "member_column": "member_id",
       "visibility_column": "visibility",
-      "everyone_values": ["everyone"],
+      "everyone_values": [
+        "everyone"
+      ],
       "write_owner_only": true,
       "max_per_member": {
         "member_column": "member_id",
-        "scope_columns": ["exchange_id"],
+        "scope_columns": [
+          "exchange_id"
+        ],
         "limit": 1
       }
     },
@@ -64,7 +96,9 @@
       "parent_table": "exchanges",
       "writer_column": "giver_id",
       "parent_status_column": "status",
-      "visible_parent_status_values": ["revealed"],
+      "visible_parent_status_values": [
+        "revealed"
+      ],
       "endpoint_writes_only": true
     },
     "gift_notes": {
@@ -73,21 +107,39 @@
       "adults_bypass": false,
       "max_per_member": {
         "member_column": "member_id",
-        "scope_columns": ["exchange_id"],
+        "scope_columns": [
+          "exchange_id"
+        ],
         "limit": 1
       }
+    },
+    "exclusions": {
+      "kind": "adult_writable"
     }
   },
   "delete_cascades": {
     "exchanges": [
-      { "table": "participants", "foreign_key": "exchange_id" },
-      { "table": "gift_notes", "foreign_key": "exchange_id" }
+      {
+        "table": "participants",
+        "foreign_key": "exchange_id"
+      },
+      {
+        "table": "gift_notes",
+        "foreign_key": "exchange_id"
+      },
+      {
+        "table": "exclusions",
+        "foreign_key": "exchange_id"
+      }
     ]
   },
   "secret_draw": {
     "parent_table": "exchanges",
     "parent_status_column": "status",
-    "draw_status_values": ["open", "drawn"],
+    "draw_status_values": [
+      "open",
+      "drawn"
+    ],
     "drawn_status_value": "drawn",
     "drawn_at_column": "drawn_at",
     "participant_table": "participants",
@@ -98,11 +150,27 @@
     "giver_column": "giver_id",
     "receiver_column": "receiver_id",
     "created_at_column": "created_at",
-    "write_acl": { "require_role": "adult" }
+    "exclusions": {
+      "table": "exclusions",
+      "scope_column": "exchange_id",
+      "member_a_column": "member_a_id",
+      "member_b_column": "member_b_id"
+    },
+    "write_acl": {
+      "require_role": "adult"
+    }
   },
-  "publishes": ["secret_santa.exchange_created"],
-  "publish_acls": {"secret_santa.exchange_created": {"require_role": "adult"}},
-  "nav": { "label": "Secret Santa" },
+  "publishes": [
+    "secret_santa.exchange_created"
+  ],
+  "publish_acls": {
+    "secret_santa.exchange_created": {
+      "require_role": "adult"
+    }
+  },
+  "nav": {
+    "label": "Secret Santa"
+  },
   "agenda": {
     "kind": "event",
     "label": "Gift exchange",
@@ -116,7 +184,11 @@
       "kind": "sql",
       "query": "SELECT title AS title, exchange_date AS happens_on FROM app_secret_santa__exchanges WHERE exchange_date IS NOT NULL AND exchange_date <> '' AND exchange_date >= :today ORDER BY exchange_date LIMIT 3"
     },
-    "display": { "template": "list", "title": "title", "when": "happens_on" },
+    "display": {
+      "template": "list",
+      "title": "title",
+      "when": "happens_on"
+    },
     "ambient_card": "countdown"
   },
   "resource_limits": {

@@ -8,6 +8,8 @@ import {
   statusLabel,
   fmtBudget,
   parseBudgetInput, searchableFields,
+  canEditExclusions, exclusionsOf, pairKey, isExcludedPair, exclusionError,
+  drawFailureMessage,
 } from "../src/logic.js";
 
 const adult = { id: "a1", name: "Alex", role: "adult" };
@@ -83,6 +85,64 @@ describe("formatting", () => {
     expect(parseBudgetInput("")).toBeNull();
     expect(parseBudgetInput("-5")).toBeNull();
     expect(parseBudgetInput("abc")).toBeNull();
+  });
+});
+
+describe("don't-pair rules", () => {
+  const rules = [
+    { id: "x1", exchange_id: "e1", member_a_id: "a1", member_b_id: "c1" },
+    { id: "x2", exchange_id: "e2", member_a_id: "a1", member_b_id: "z9" },
+  ];
+
+  it("are editable by adults while open or drawn, never after reveal", () => {
+    expect(canEditExclusions({ status: "open" }, adult)).toBe(true);
+    expect(canEditExclusions({ status: "drawn" }, adult)).toBe(true);
+    expect(canEditExclusions({ status: "revealed" }, adult)).toBe(false);
+    expect(canEditExclusions({ status: "open" }, child)).toBe(false);
+    expect(canEditExclusions(null, adult)).toBe(false);
+  });
+
+  it("are scoped to the exchange and order-independent", () => {
+    expect(exclusionsOf({ id: "e1" }, rules).map(r => r.id)).toEqual(["x1"]);
+    expect(pairKey("b", "a")).toBe(pairKey("a", "b"));
+    expect(isExcludedPair(rules, "c1", "a1")).toBe(true);
+    expect(isExcludedPair(rules, "c1", "z9")).toBe(false);
+  });
+
+  it("refuse empty, identical, and duplicate pairs", () => {
+    expect(exclusionError("", "a1", rules)).toMatch(/two people/);
+    expect(exclusionError("a1", "a1", rules)).toMatch(/different/);
+    expect(exclusionError("c1", "a1", rules)).toMatch(/already/);
+    expect(exclusionError("c1", "z9", rules)).toBeNull();
+  });
+});
+
+describe("drawFailureMessage", () => {
+  const names = { a1: "Alex", c1: "Casey" };
+  const nameOf = id => names[id];
+
+  it("explains a rule set that would make the draw guessable", () => {
+    const msg = drawFailureMessage({ reason: "constraints_too_revealing", over_constrained_member_ids: ["a1"] }, nameOf);
+    expect(msg).toMatch(/Alex has only one person left/);
+    expect(msg).toMatch(/wouldn't be secret/);
+    // Unknown ids must not produce a dangling sentence.
+    expect(drawFailureMessage({ reason: "constraints_too_revealing", over_constrained_member_ids: ["gone"] }, nameOf))
+      .toMatch(/^Someone has only one person left/);
+  });
+
+  it("names who is stuck when the rules leave no draw", () => {
+    const msg = drawFailureMessage({ reason: "constraints_unsatisfiable", over_constrained_member_ids: ["a1", "c1"] }, nameOf);
+    expect(msg).toMatch(/Alex, Casey have nobody left/);
+    expect(drawFailureMessage({ reason: "constraints_unsatisfiable", over_constrained_member_ids: [] }, nameOf))
+      .toMatch(/no possible draw/);
+  });
+
+  it("maps every hub reason and falls back to the raw error", () => {
+    for (const reason of ["not_enough_participants", "draw_closed", "draw_changed", "too_many_exclusions"]) {
+      expect(drawFailureMessage({ reason })).not.toBe("Draw failed.");
+    }
+    expect(drawFailureMessage({ error: "boom" })).toBe("boom");
+    expect(drawFailureMessage({})).toBe("Draw failed.");
   });
 });
 

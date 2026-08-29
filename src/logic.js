@@ -57,6 +57,67 @@ export function drawError(participantIds) {
   return null;
 }
 
+// ── "Don't pair" rules ────────────────────────────────────────────────────────
+// Rules live in the exclusions table (adult_writable) and are read by the hub's
+// secret_draw as forbidden giver/receiver pairs in BOTH directions. They can be
+// edited until the exchange is revealed — a re-draw honours the current rules.
+
+export function canEditExclusions(exchange, member) {
+  return isAdult(member) && (exchange?.status === "open" || exchange?.status === "drawn");
+}
+
+export function exclusionsOf(exchange, exclusions) {
+  if (!exchange) return [];
+  return exclusions.filter(e => e.exchange_id === exchange.id);
+}
+
+/** Order-independent identity of a pair, so A–B and B–A are the same rule. */
+export function pairKey(a, b) {
+  return [String(a), String(b)].sort().join("|");
+}
+
+export function isExcludedPair(exclusions, a, b) {
+  const key = pairKey(a, b);
+  return exclusions.some(e => pairKey(e.member_a_id, e.member_b_id) === key);
+}
+
+/** Pre-check for adding a rule. Returns an error string or null. */
+export function exclusionError(a, b, exclusions) {
+  if (!a || !b) return "Pick two people.";
+  if (a === b) return "Pick two different people.";
+  if (isExcludedPair(exclusions, a, b)) return "Those two are already kept apart.";
+  return null;
+}
+
+/** Human-readable failure for a draw response the hub refused. */
+export function drawFailureMessage(json, nameOf = id => id) {
+  switch (json?.reason) {
+    case "not_enough_participants":
+      return "At least 2 participants who are still household members are needed.";
+    case "draw_closed":
+      return "This exchange can no longer be drawn.";
+    case "draw_changed":
+      return "The participants or the don't-pair rules changed while the draw was running. Try again.";
+    case "too_many_exclusions":
+      return "There are too many don't-pair rules for one exchange.";
+    case "constraints_too_revealing": {
+      // The hub refuses a rule set that leaves someone exactly one possible
+      // person: the rules are visible to everyone, so that pairing would
+      // already be public before anyone opened their assignment.
+      const pinned = (json.over_constrained_member_ids ?? []).map(nameOf).filter(Boolean);
+      const who = pinned.length ? ` ${pinned.join(", ")} ${pinned.length === 1 ? "has" : "have"} only one person left` : "Someone has only one person left";
+      return `${who.trim()}, so the draw wouldn't be secret — anyone could work it out from the rules. Remove a rule or invite more people.`;
+    }
+    case "constraints_unsatisfiable": {
+      const stuck = (json.over_constrained_member_ids ?? []).map(nameOf).filter(Boolean);
+      const who = stuck.length ? ` ${stuck.join(", ")} ${stuck.length === 1 ? "has" : "have"} nobody left to draw.` : "";
+      return `The don't-pair rules leave no possible draw.${who} Remove a rule or invite more people.`;
+    }
+    default:
+      return json?.error || "Draw failed.";
+  }
+}
+
 export function fmtBudget(cents) {
   if (cents == null || cents === "") return null;
   const n = Number(cents);

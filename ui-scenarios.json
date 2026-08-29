@@ -1,0 +1,300 @@
+{
+  "scenarios": [
+    {
+      "name": "before the reveal a giver's browser renders only their own assignment",
+      "members": {
+        "organizer": "admin",
+        "santa": "child",
+        "helper": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at) VALUES ('ui-x1', ?, ?, 2500, '', 'drawn', ?, datetime('now'), datetime('now'))",
+          "params": [
+            "Holiday Exchange",
+            "Wrapped by the 24th",
+            "{{organizer}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES ('ui-p1', 'ui-x1', ?, 'everyone', ?, datetime('now')), ('ui-p2', 'ui-x1', ?, 'everyone', ?, datetime('now')), ('ui-p3', 'ui-x1', ?, 'everyone', ?, datetime('now'))",
+          "params": [
+            "{{organizer}}",
+            "Anything with cinnamon",
+            "{{santa}}",
+            "Loves dinosaurs and LEGO",
+            "{{helper}}",
+            "Gardening gloves, size medium"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES ('ui-a1', 'ui-x1', ?, ?, datetime('now')), ('ui-a2', 'ui-x1', ?, ?, datetime('now')), ('ui-a3', 'ui-x1', ?, ?, datetime('now'))",
+          "params": [
+            "{{organizer}}",
+            "{{santa}}",
+            "{{santa}}",
+            "{{helper}}",
+            "{{helper}}",
+            "{{organizer}}"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x1\"]",
+          "as": "santa"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x1\"]",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"participant-list\"]",
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"participant-row\"]",
+          "count": 3,
+          "as": "santa"
+        },
+        {
+          "action": "expectVisible",
+          "selector": "[data-testid=\"assignment-card\"]",
+          "as": "santa"
+        },
+        {
+          "action": "expectText",
+          "text": "Gardening gloves, size medium",
+          "selector": "[data-testid=\"assignment-hint\"]",
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"assignment-name\"]",
+          "count": 1,
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"reveal-row\"]",
+          "count": 0,
+          "as": "santa"
+        },
+        {
+          "action": "expectNoText",
+          "text": "was Santa for",
+          "as": "santa"
+        }
+      ]
+    },
+    {
+      "name": "reveal releases every pairing to a member who is not the organizer",
+      "members": {
+        "organizer": "admin",
+        "santa": "child",
+        "helper": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES ('ui-x2', ?, '', NULL, '', 'revealed', ?, datetime('now'), datetime('now'), datetime('now'))",
+          "params": [
+            "Office Party",
+            "{{organizer}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES ('ui-q1', 'ui-x2', ?, 'everyone', '', datetime('now')), ('ui-q2', 'ui-x2', ?, 'everyone', '', datetime('now')), ('ui-q3', 'ui-x2', ?, 'everyone', '', datetime('now'))",
+          "params": [
+            "{{organizer}}",
+            "{{santa}}",
+            "{{helper}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES ('ui-b1', 'ui-x2', ?, ?, datetime('now')), ('ui-b2', 'ui-x2', ?, ?, datetime('now')), ('ui-b3', 'ui-x2', ?, ?, datetime('now'))",
+          "params": [
+            "{{organizer}}",
+            "{{santa}}",
+            "{{santa}}",
+            "{{helper}}",
+            "{{helper}}",
+            "{{organizer}}"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x2\"]",
+          "as": "santa"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x2\"]",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"reveal-list\"]",
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"reveal-row\"]",
+          "count": 3,
+          "as": "santa"
+        },
+        {
+          "action": "expectText",
+          "text": "was Santa for",
+          "selector": "[data-testid=\"reveal-list\"]",
+          "as": "santa"
+        }
+      ]
+    },
+    {
+      "name": "adults add a don't-pair rule that a child can read but not edit",
+      "members": {
+        "organizer": "admin",
+        "santa": "child",
+        "helper": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES ('ui-x3', ?, '', NULL, '', 'open', ?, datetime('now'))",
+          "params": [
+            "Cousins Exchange",
+            "{{organizer}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES ('ui-r1', 'ui-x3', ?, 'everyone', '', datetime('now')), ('ui-r2', 'ui-x3', ?, 'everyone', '', datetime('now'))",
+          "params": [
+            "{{santa}}",
+            "{{helper}}"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "organizer"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"rule-add\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "select",
+          "selector": "[data-testid=\"field-rule-a\"]",
+          "value": "{{santa}}",
+          "as": "organizer"
+        },
+        {
+          "action": "select",
+          "selector": "[data-testid=\"field-rule-b\"]",
+          "value": "{{helper}}",
+          "as": "organizer"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"rule-add-btn\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"rule-row\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "reload",
+          "as": "organizer"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "organizer"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"rule-row\"]",
+          "count": 1,
+          "as": "organizer"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"rule-remove-btn\"]",
+          "count": 1,
+          "as": "organizer"
+        },
+        {
+          "action": "open",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "santa"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"exchange-card\"][data-exchange-id=\"ui-x3\"]",
+          "as": "santa"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"rules-card\"]",
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"rule-row\"]",
+          "count": 1,
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"rule-add\"]",
+          "count": 0,
+          "as": "santa"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"rule-remove-btn\"]",
+          "count": 0,
+          "as": "santa"
+        }
+      ]
+    }
+  ]
+}

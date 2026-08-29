@@ -2,45 +2,87 @@
   "scenarios": [
     {
       "name": "assignments are sealed until reveal: each giver sees only their own row, then everyone sees all",
-      "members": { "a": "adult", "b": "adult", "c": "adult" },
+      "members": {
+        "a": "adult",
+        "b": "adult",
+        "c": "adult"
+      },
       "steps": [
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_secret_santa__exchanges (id, title, status, created_by, created_at, drawn_at) VALUES (?, ?, 'drawn', ?, ?, ?)",
-          "params": ["ex1", "Holiday 2026", "{{a}}", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"]
+          "params": [
+            "ex1",
+            "Holiday 2026",
+            "{{a}}",
+            "2026-01-01T00:00:00Z",
+            "2026-01-02T00:00:00Z"
+          ]
         },
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES ('as1', 'ex1', ?, ?, '2026-01-02T00:00:00Z'), ('as2', 'ex1', ?, ?, '2026-01-02T00:00:00Z'), ('as3', 'ex1', ?, ?, '2026-01-02T00:00:00Z')",
-          "params": ["{{a}}", "{{b}}", "{{b}}", "{{c}}", "{{c}}", "{{a}}"]
+          "params": [
+            "{{a}}",
+            "{{b}}",
+            "{{b}}",
+            "{{c}}",
+            "{{c}}",
+            "{{a}}"
+          ]
         },
         {
           "action": "db",
           "as": "a",
           "sql": "SELECT giver_id, receiver_id FROM app_secret_santa__assignments WHERE exchange_id = ? AND giver_id = ?",
-          "params": ["ex1", "{{a}}"],
-          "expect": { "status": 200, "rowCount": 1 }
+          "params": [
+            "ex1",
+            "{{a}}"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 1
+          }
         },
         {
           "action": "db",
           "as": "a",
           "sql": "SELECT giver_id FROM app_secret_santa__assignments WHERE exchange_id = ?",
-          "params": ["ex1"],
-          "expect": { "status": 200, "rowCount": 1 }
+          "params": [
+            "ex1"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 1
+          }
         },
         {
           "action": "db",
           "as": "b",
           "sql": "SELECT giver_id, receiver_id FROM app_secret_santa__assignments WHERE giver_id = ?",
-          "params": ["{{c}}"],
-          "expect": { "status": 200, "rowCount": 0 }
+          "params": [
+            "{{c}}"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
         },
         {
           "action": "db",
           "as": "a",
           "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, ?)",
-          "params": ["as4", "ex1", "{{a}}", "{{c}}", "2026-01-02T00:00:00Z"],
-          "expect": { "status": 403, "errorIncludes": "endpoint" }
+          "params": [
+            "as4",
+            "ex1",
+            "{{a}}",
+            "{{c}}",
+            "2026-01-02T00:00:00Z"
+          ],
+          "expect": {
+            "status": 403,
+            "errorIncludes": "endpoint"
+          }
         },
         {
           "action": "seedRaw",
@@ -50,44 +92,178 @@
           "action": "db",
           "as": "b",
           "sql": "SELECT giver_id, receiver_id FROM app_secret_santa__assignments WHERE exchange_id = ?",
-          "params": ["ex1"],
-          "expect": { "status": 200, "rowCount": 3 }
+          "params": [
+            "ex1"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 3
+          }
         }
       ]
     },
     {
       "name": "gift notes are private even from adults; a member can join an exchange only once",
-      "members": { "a": "adult", "b": "adult" },
+      "members": {
+        "a": "adult",
+        "b": "adult"
+      },
       "steps": [
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_secret_santa__exchanges (id, title, status, created_by, created_at) VALUES (?, ?, 'open', ?, ?)",
-          "params": ["ex1", "Holiday 2026", "{{a}}", "2026-01-01T00:00:00Z"]
+          "params": [
+            "ex1",
+            "Holiday 2026",
+            "{{a}}",
+            "2026-01-01T00:00:00Z"
+          ]
         },
         {
           "action": "seedRaw",
           "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-          "params": ["gn1", "ex1", "{{a}}", "getting b a scarf", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]
+          "params": [
+            "gn1",
+            "ex1",
+            "{{a}}",
+            "getting b a scarf",
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z"
+          ]
         },
         {
           "action": "db",
           "as": "b",
           "sql": "SELECT id, body FROM app_secret_santa__gift_notes",
-          "expect": { "status": 200, "rowCount": 0 }
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
         },
         {
           "action": "db",
           "as": "b",
           "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, created_at) VALUES (?, ?, ?, 'everyone', ?)",
-          "params": ["p1", "ex1", "{{b}}", "2026-01-01T00:00:00Z"],
-          "expect": { "status": 200 }
+          "params": [
+            "p1",
+            "ex1",
+            "{{b}}",
+            "2026-01-01T00:00:00Z"
+          ],
+          "expect": {
+            "status": 200
+          }
         },
         {
           "action": "db",
           "as": "b",
           "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, created_at) VALUES (?, ?, ?, 'everyone', ?)",
-          "params": ["p2", "ex1", "{{b}}", "2026-01-01T00:00:00Z"],
-          "expect": { "status": 403 }
+          "params": [
+            "p2",
+            "ex1",
+            "{{b}}",
+            "2026-01-01T00:00:00Z"
+          ],
+          "expect": {
+            "status": 403
+          }
+        }
+      ]
+    },
+    {
+      "name": "don't-pair rules are readable by everyone, writable by adults only, and gone with the exchange",
+      "members": {
+        "a": "adult",
+        "c": "child"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_secret_santa__exchanges (id, title, status, created_by, created_at) VALUES (?, ?, 'open', ?, ?)",
+          "params": [
+            "ex1",
+            "Holiday 2026",
+            "{{a}}",
+            "2026-01-01T00:00:00Z"
+          ]
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "params": [
+            "x1",
+            "ex1",
+            "{{a}}",
+            "{{c}}",
+            "{{a}}",
+            "2026-01-01T00:00:00Z"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "c",
+          "sql": "SELECT member_a_id, member_b_id FROM app_secret_santa__exclusions WHERE exchange_id = ?",
+          "params": [
+            "ex1"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 1
+          }
+        },
+        {
+          "action": "db",
+          "as": "c",
+          "sql": "DELETE FROM app_secret_santa__exclusions WHERE id = ?",
+          "params": [
+            "x1"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "c",
+          "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "params": [
+            "x2",
+            "ex1",
+            "{{c}}",
+            "{{a}}",
+            "{{c}}",
+            "2026-01-01T00:00:00Z"
+          ],
+          "expect": {
+            "status": 403
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "DELETE FROM app_secret_santa__exchanges WHERE id = ?",
+          "params": [
+            "ex1"
+          ],
+          "expect": {
+            "status": 200
+          }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT id FROM app_secret_santa__exclusions WHERE exchange_id = ?",
+          "params": [
+            "ex1"
+          ],
+          "expect": {
+            "status": 200,
+            "rowCount": 0
+          }
         }
       ]
     }

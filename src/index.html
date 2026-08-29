@@ -100,6 +100,17 @@
       background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
     }
     .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
+    .rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--hub-border, #f3f4f6); font-size: 0.9rem; }
+    .rule-row:last-child { border-bottom: none; }
+    .rule-row .grow { flex: 1; }
+    .rule-add { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 8px; align-items: center; margin-top: 10px; }
+    .rule-add select {
+      width: 100%; padding: 8px 10px; font: inherit; font-size: 0.88rem;
+      border: 1px solid var(--hub-border, #d1d5db); border-radius: calc(var(--hub-radius, 12px) - 4px);
+      background: var(--hub-surface, #fff); color: var(--hub-text, #000000);
+    }
+    .icon-btn { background: none; border: none; cursor: pointer; color: var(--hub-text-muted, #6b7280); font-size: 1rem; padding: 2px 6px; }
+    .icon-btn:hover { color: #b91c1c; }
   </style>
 </head>
 <body>
@@ -111,6 +122,8 @@
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
       drawError, statusLabel, fmtBudget, parseBudgetInput, searchableFields,
+      canEditExclusions as _canEditExclusions, exclusionsOf as _exclusionsOf, exclusionError,
+      drawFailureMessage,
     } from "./logic.js";
 
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -123,6 +136,7 @@
       participants: "app_secret_santa__participants",
       assignments:  "app_secret_santa__assignments",
       giftNotes:    "app_secret_santa__gift_notes",
+      exclusions:   "app_secret_santa__exclusions",
     };
 
     const EVENTS = window.__EVENTS_URL ?? "";
@@ -148,7 +162,7 @@
     }
 
     let members = [], memberMap = new Map();
-    let exchanges = [], participants = [], assignments = [], giftNotes = [];
+    let exchanges = [], participants = [], assignments = [], giftNotes = [], exclusions = [];
     let currentExchangeId = null;
 let searchQ = "";       // in-app search (see logic.js searchableFields)
     let modalEl = null;
@@ -198,17 +212,19 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           created_at: new Date().toISOString(),
         }));
         assignments = []; giftNotes = [];
+        exclusions = [{ id: "demo-ex1", exchange_id: "demo-x", member_a_id: "demo-1", member_b_id: "demo-2", created_by: "demo-1", created_at: new Date().toISOString() }];
         return;
       }
-      const [x, p, a, n] = await Promise.all([
+      const [x, p, a, n, e] = await Promise.all([
         db(`SELECT * FROM ${T.exchanges} ORDER BY created_at DESC`),
         db(`SELECT * FROM ${T.participants}`),
         // sealed_until: only my own rows until an exchange is revealed, then all of its rows.
         db(`SELECT * FROM ${T.assignments}`),
         db(`SELECT * FROM ${T.giftNotes}`), // owner_only: returns only my own notes
+        db(`SELECT * FROM ${T.exclusions}`), // adult_writable: everyone reads, adults write
       ]);
       exchanges = x.rows; participants = p.rows;
-      assignments = a.rows; giftNotes = n.rows;
+      assignments = a.rows; giftNotes = n.rows; exclusions = e.rows;
     }
 
     async function refreshAssignments() {
@@ -223,6 +239,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     const participantsOf = x => participants.filter(p => p.exchange_id === x.id);
     const assignmentsOf = x => assignments.filter(a => a.exchange_id === x.id);
     const myNote = x => giftNotes.find(n => n.exchange_id === x.id && n.member_id === ME?.id) ?? null;
+    const exclusionsOf = x => _exclusionsOf(x, exclusions);
+    const canEditExclusions = x => _canEditExclusions(x, ME);
 
     function memberName(id) { return memberMap.get(id)?.name ?? "Former member"; }
 
@@ -254,7 +272,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       closeModal();
       modalEl = document.createElement("div");
       modalEl.className = "modal-backdrop";
-      modalEl.innerHTML = `<div class="modal">${html}</div>`;
+      modalEl.innerHTML = `<div class="modal" data-testid="modal">${html}</div>`;
       modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
       document.body.appendChild(modalEl);
       modalEl.querySelector("[data-autofocus]")?.focus();
@@ -269,16 +287,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         <h2>${x ? "Edit exchange" : "New gift exchange"}</h2>
         <p class="meta">Anyone in the household can join while it's open.</p>
         <label>Name</label>
-        <input type="text" id="f-title" data-autofocus maxlength="80" value="${x ? esc(x.title) : ""}" placeholder="Holiday Gift Exchange" />
+        <input type="text" id="f-title" data-testid="field-title" data-autofocus maxlength="80" value="${x ? esc(x.title) : ""}" placeholder="Holiday Gift Exchange" />
         <label>Budget (optional, $)</label>
-        <input type="number" id="f-budget" min="1" step="0.01" value="${x?.budget_cents ? (x.budget_cents / 100) : ""}" placeholder="25" />
+        <input type="number" id="f-budget" data-testid="field-budget" min="1" step="0.01" value="${x?.budget_cents ? (x.budget_cents / 100) : ""}" placeholder="25" />
         <label>Exchange date (optional)</label>
-        <input type="date" id="f-date" value="${x?.exchange_date ? esc(x.exchange_date) : ""}" />
+        <input type="date" id="f-date" data-testid="field-date" value="${x?.exchange_date ? esc(x.exchange_date) : ""}" />
         <label>Details (optional)</label>
-        <textarea id="f-details" maxlength="500" placeholder="Where, when, wrapping rules…">${x?.details ? esc(x.details) : ""}</textarea>
+        <textarea id="f-details" data-testid="field-details" maxlength="500" placeholder="Where, when, wrapping rules…">${x?.details ? esc(x.details) : ""}</textarea>
         <div class="modal-actions">
           <button class="btn ghost" onclick="closeModal()">Cancel</button>
-          <button class="btn btn-primary" onclick="submitExchange(${x ? `'${x.id}'` : "null"})">${x ? "Save" : "Create"}</button>
+          <button class="btn btn-primary" data-testid="exchange-submit-btn" onclick="submitExchange(${x ? `'${x.id}'` : "null"})">${x ? "Save" : "Create"}</button>
         </div>
       `);
     };
@@ -396,11 +414,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           body: JSON.stringify({ scope_id: exchangeId }),
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          if (json.reason === "not_enough_participants") throw new Error("At least 2 participants who are still household members are needed.");
-          if (json.reason === "draw_closed") throw new Error("This exchange can no longer be drawn.");
-          throw new Error(json.error || `Draw failed (${res.status})`);
-        }
+        if (!res.ok) throw new Error(drawFailureMessage(json, id => memberMap.get(id)?.name));
 
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "drawn", drawn_at: new Date().toISOString() };
@@ -415,6 +429,45 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       } catch (e) {
         hubAlert("The draw didn't complete.", { description: `${e.message} — run the draw again to retry.` });
       }
+    };
+
+    // ── "Don't pair" rules ───────────────────────────────────────────────────
+    // Stored in the exclusions table and read by the hub at draw time as a
+    // forbidden pair in both directions. A rule can name anyone in the
+    // household; it only matters once both people have joined.
+    window.addExclusion = async function(exchangeId) {
+      const x = exchangeById(exchangeId);
+      if (!x || !canEditExclusions(x)) return;
+      const a = document.getElementById("f-excl-a")?.value ?? "";
+      const b = document.getElementById("f-excl-b")?.value ?? "";
+      const err = exclusionError(a, b, exclusionsOf(x));
+      if (err) { hubAlert(err); return; }
+      if (demo) { hubAlert("Demo mode — install in your hub to save rules."); return; }
+      const btn = document.getElementById("excl-btn");
+      if (btn) btn.disabled = true;
+      try {
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+        await db(`INSERT INTO ${T.exclusions} (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, exchangeId, a, b, ME?.id ?? "system", now]);
+        exclusions = [...exclusions, { id, exchange_id: exchangeId, member_a_id: a, member_b_id: b, created_by: ME?.id, created_at: now }];
+        render();
+      } catch (e) {
+        if (btn) btn.disabled = false;
+        hubAlert("Couldn't save the rule.", { description: e.message });
+      }
+    };
+
+    window.removeExclusion = async function(exclusionId) {
+      const rule = exclusions.find(e => e.id === exclusionId);
+      const x = rule ? exchangeById(rule.exchange_id) : null;
+      if (!rule || !x || !canEditExclusions(x)) return;
+      if (demo) { hubAlert("Demo mode — install in your hub to edit rules."); return; }
+      try {
+        await db(`DELETE FROM ${T.exclusions} WHERE id = ?`, [exclusionId]);
+        exclusions = exclusions.filter(e => e.id !== exclusionId);
+        render();
+      } catch (e) { hubAlert("Couldn't remove the rule.", { description: e.message }); }
     };
 
     // ── Reveal / archive / delete ────────────────────────────────────────────
@@ -464,12 +517,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!ok) return;
       try {
         // Assignments are endpoint-written; app SQL can't touch them. The clear
-        // endpoint also works if the exchange row is already gone (orphan cleanup).
-        // Participants and gift notes go with the exchange via manifest
-        // delete_cascades — neither could be deleted here: participants is
-        // write_owner_only and gift_notes is owner_only with adults_bypass off,
-        // so another member's rows were unreachable by anyone once the parent
-        // was gone.
+        // endpoint also works if the exchange row is already gone (orphan
+        // cleanup), so a retry after a later failure is safe. Participants and
+        // gift notes go with the exchange via manifest delete_cascades — neither
+        // could be deleted here: participants is write_owner_only and gift_notes
+        // is owner_only with adults_bypass off, so another member's rows were
+        // unreachable by anyone once the parent was gone.
         const res = await fetch("api/secret-draw/clear", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -548,9 +601,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         ${demo ? `<div class="banner">Demo mode — showing sample data. Install in your hub to run a real exchange.</div>` : ""}
         <div class="row spread">
           <div><h1>🎅 Secret Santa</h1><p class="subtitle">Gift exchanges where the draw stays secret — even from the organizer.</p></div>
-          ${canManage() ? `<button class="btn" onclick="openExchangeModal(null)">New exchange</button>` : ""}
+          ${canManage() ? `<button class="btn" data-testid="new-exchange-btn" onclick="openExchangeModal(null)">New exchange</button>` : ""}
         </div>
-        ${exchanges.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search exchanges…" aria-label="Search exchanges" value="${esc(searchQ)}" /></div>` : ""}
+        ${exchanges.length ? `<div class="search-row"><input id="search" data-testid="field-search" class="search-input" type="search" placeholder="Search exchanges…" aria-label="Search exchanges" value="${esc(searchQ)}" /></div>` : ""}
         ${active.length === 0 ? (searchQ && archived.length === 0 ? `
           <div class="card empty">
             <div style="font-size:2rem">🔍</div>
@@ -578,7 +631,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         x.exchange_date ? new Date(x.exchange_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null,
       ].filter(Boolean).join(" · ");
       return `
-        <div class="card clickable" onclick="openExchange('${x.id}')">
+        <div class="card clickable" data-testid="exchange-card" data-exchange-id="${esc(x.id)}" onclick="openExchange('${x.id}')">
           <div class="row spread">
             <strong>${esc(x.title)}</strong>
             <span class="chip ${esc(x.status)}">${esc(statusLabel(x))}</span>
@@ -598,7 +651,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       ].filter(Boolean).join(" · ");
 
       return `
-        <button class="back" onclick="goBack()">← All exchanges</button>
+        <button class="back" data-testid="exchange-back" onclick="goBack()">← All exchanges</button>
         <div class="row spread">
           <div>
             <h1>${esc(x.title)} <span class="chip ${esc(x.status)}">${esc(statusLabel(x))}</span></h1>
@@ -611,19 +664,19 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         ${x.status === "revealed" ? renderReveals(x) : ""}
 
         <div class="section-title">Participants (${ps.length})</div>
-        <div class="card">
+        <div class="card" data-testid="participant-list">
           ${ps.length === 0 ? `<p class="meta">Nobody has joined yet.</p>` : ps.map(p => `
-            <div class="participant">
+            <div class="participant" data-testid="participant-row" data-member-id="${esc(p.member_id)}">
               ${avatarHtml(p.member_id)}
               <div>
                 <div>${esc(memberName(p.member_id))}${p.member_id === ME?.id ? ' <span class="meta">(you)</span>' : ""}</div>
-                ${p.hint ? `<div class="hint-text">🎯 ${esc(p.hint)}</div>` : ""}
+                ${p.hint ? `<div class="hint-text" data-testid="participant-hint">🎯 ${esc(p.hint)}</div>` : ""}
               </div>
             </div>`).join("")}
           ${x.status === "open" && ME ? `
             <div class="row" style="margin-top:12px">
-              ${_canJoin(x, participants, ME) ? `<button class="btn" id="join-btn" onclick="joinExchange('${x.id}')">Join</button>` : ""}
-              ${_canLeave(x, participants, ME) ? `<button class="btn ghost small" onclick="leaveExchange('${x.id}')">Leave</button>` : ""}
+              ${_canJoin(x, participants, ME) ? `<button class="btn" id="join-btn" data-testid="join-btn" onclick="joinExchange('${x.id}')">Join</button>` : ""}
+              ${_canLeave(x, participants, ME) ? `<button class="btn ghost small" data-testid="leave-btn" onclick="leaveExchange('${x.id}')">Leave</button>` : ""}
             </div>` : ""}
           ${x.status === "drawn" && ME && !meIn ? `<p class="meta" style="margin-top:10px">The draw already happened — you can't join this one.</p>` : ""}
         </div>
@@ -631,18 +684,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         ${meIn && x.status !== "archived" ? `
           <div class="section-title">Your gift hint <span class="meta" style="font-weight:400">(visible to everyone)</span></div>
           <div class="card">
-            <textarea id="f-hint" maxlength="200" placeholder="Sizes, favorite things, allergies… help your Santa out!">${meIn.hint ? esc(meIn.hint) : ""}</textarea>
-            <div class="row" style="margin-top:10px"><button class="btn small" id="hint-btn" onclick="saveHint('${x.id}')">Save hint</button></div>
+            <textarea id="f-hint" data-testid="field-hint" maxlength="200" placeholder="Sizes, favorite things, allergies… help your Santa out!">${meIn.hint ? esc(meIn.hint) : ""}</textarea>
+            <div class="row" style="margin-top:10px"><button class="btn small" id="hint-btn" data-testid="hint-save-btn" onclick="saveHint('${x.id}')">Save hint</button></div>
           </div>` : ""}
+
+        ${renderExclusions(x)}
 
         ${manage ? `
           <div class="section-title">Organizer</div>
           <div class="card">
             <div class="row">
-              ${x.status === "open" ? `<button class="btn" onclick="runDraw('${x.id}', false)">🎩 Draw names</button>` : ""}
+              ${x.status === "open" ? `<button class="btn" data-testid="draw-btn" onclick="runDraw('${x.id}', false)">🎩 Draw names</button>` : ""}
               ${x.status === "drawn" ? `
-                <button class="btn" onclick="revealExchange('${x.id}')">🎉 Reveal pairings</button>
-                <button class="btn ghost" onclick="runDraw('${x.id}', true)">Re-draw</button>` : ""}
+                <button class="btn" data-testid="reveal-btn" onclick="revealExchange('${x.id}')">🎉 Reveal pairings</button>
+                <button class="btn ghost" data-testid="redraw-btn" onclick="runDraw('${x.id}', true)">Re-draw</button>` : ""}
               ${x.status !== "archived" ? `<button class="btn ghost" onclick="openExchangeModal('${x.id}')">Edit</button>` : ""}
               ${x.status !== "archived" ? `<button class="btn ghost" onclick="archiveExchange('${x.id}')">Archive</button>` : ""}
               <button class="btn danger" onclick="deleteExchange('${x.id}')">Delete</button>
@@ -650,6 +705,36 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             ${x.status === "open" ? `<p class="meta" style="margin-top:10px">Names are matched on the server and each person can only ever read their own — no one (you included) can see who has whom.</p>` : ""}
           </div>` : ""}
       `;
+    }
+
+    // Everyone can read the rules (they say nothing about who has whom);
+    // adults edit them while the exchange is open or drawn.
+    function renderExclusions(x) {
+      const rules = exclusionsOf(x);
+      const editable = canEditExclusions(x);
+      if (!rules.length && !editable) return "";
+      // A blank first option, so the form does not open on a same-person pair
+      // that every first click would bounce.
+      const options = `<option value="">Choose…</option>` + members
+        .map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`)
+        .join("");
+      return `
+        <div class="section-title">Don't pair <span class="meta" style="font-weight:400">(spouses, people who already exchange)</span></div>
+        <div class="card" data-testid="rules-card">
+          ${rules.length === 0 ? `<p class="meta">No rules yet — anyone can draw anyone.</p>` : rules.map(r => `
+            <div class="rule-row" data-testid="rule-row" data-rule-id="${esc(r.id)}">
+              <span class="grow">${esc(memberName(r.member_a_id))} &amp; ${esc(memberName(r.member_b_id))} won't get each other</span>
+              ${editable ? `<button class="icon-btn" title="Remove rule" aria-label="Remove rule" data-testid="rule-remove-btn" onclick="removeExclusion('${esc(r.id)}')">✕</button>` : ""}
+            </div>`).join("")}
+          ${editable ? `
+            <div class="rule-add" data-testid="rule-add">
+              <select id="f-excl-a" data-testid="field-rule-a" aria-label="First person">${options}</select>
+              <span class="meta">&amp;</span>
+              <select id="f-excl-b" data-testid="field-rule-b" aria-label="Second person">${options}</select>
+              <button class="btn small" id="excl-btn" data-testid="rule-add-btn" onclick="addExclusion('${x.id}')">Add</button>
+            </div>
+            ${x.status === "drawn" ? `<p class="meta" style="margin-top:8px">Changes apply on the next re-draw.</p>` : ""}` : ""}
+        </div>`;
     }
 
     function renderAssignmentCard(x, mine) {
@@ -660,19 +745,19 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const hint = participantsOf(x).find(p => p.member_id === mine.receiver_id)?.hint;
       const note = myNote(x);
       return `
-        <div class="card assignment-card">
+        <div class="card assignment-card" data-testid="assignment-card">
           <div class="meta">You're the Secret Santa for</div>
-          <div class="assignment-name">🎁 ${esc(r?.name ?? "Former member")}</div>
+          <div class="assignment-name" data-testid="assignment-name">🎁 ${esc(r?.name ?? "Former member")}</div>
           ${fmtBudget(x.budget_cents) ? `<div class="meta">Keep it around ${esc(fmtBudget(x.budget_cents))}</div>` : ""}
-          ${hint ? `<div class="hint-text" style="margin-top:8px">🎯 Their hint: ${esc(hint)}</div>` : ""}
+          ${hint ? `<div class="hint-text" data-testid="assignment-hint" style="margin-top:8px">🎯 Their hint: ${esc(hint)}</div>` : ""}
           <div class="row" style="justify-content:center;margin-top:14px">
             <button class="btn ghost small" onclick="openWishlist()">Browse their Wish List</button>
           </div>
         </div>
         <div class="section-title">Private gift ideas <span class="meta" style="font-weight:400">(only you can see this)</span></div>
         <div class="card">
-          <textarea id="f-note" maxlength="1000" placeholder="Ideas, links, what you've bought…">${note?.body ? esc(note.body) : ""}</textarea>
-          <div class="row" style="margin-top:10px"><button class="btn small" id="note-btn" onclick="saveNote('${x.id}')">Save note</button></div>
+          <textarea id="f-note" data-testid="field-note" maxlength="1000" placeholder="Ideas, links, what you've bought…">${note?.body ? esc(note.body) : ""}</textarea>
+          <div class="row" style="margin-top:10px"><button class="btn small" id="note-btn" data-testid="note-save-btn" onclick="saveNote('${x.id}')">Save note</button></div>
         </div>`;
     }
 
@@ -682,9 +767,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const rs = assignmentsOf(x);
       return `
         <div class="section-title">The big reveal 🎉</div>
-        <div class="card">
+        <div class="card" data-testid="reveal-list">
           ${rs.length === 0 ? `<p class="meta">No pairings to show. Try refreshing.</p>` : rs.map(r => `
-            <div class="reveal-row">
+            <div class="reveal-row" data-testid="reveal-row" data-giver-id="${esc(r.giver_id)}">
               ${avatarHtml(r.giver_id)}
               <span><strong>${esc(memberName(r.giver_id))}</strong> was Santa for <strong>${esc(memberName(r.receiver_id))}</strong></span>
             </div>`).join("")}

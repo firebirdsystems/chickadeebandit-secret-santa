@@ -13,14 +13,17 @@ import { describe, it, expect } from "vitest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(readFileSync(join(__dirname, "../manifest.json"), "utf-8"));
-const schema = readFileSync(join(__dirname, "../migrations/001_init.sql"), "utf-8");
+const schema = ["001_init.sql", "002_exclusions.sql"]
+  .map((f) => readFileSync(join(__dirname, "../migrations", f), "utf-8"))
+  .join("\n");
 
 describe("delete_cascades", () => {
-  it("declares the exchange's participants and gift notes", () => {
+  it("declares the exchange's participants, gift notes and don't-pair rules", () => {
     expect(manifest.delete_cascades).toEqual({
       exchanges: [
         { table: "participants", foreign_key: "exchange_id" },
         { table: "gift_notes", foreign_key: "exchange_id" },
+        { table: "exclusions", foreign_key: "exchange_id" },
       ],
     });
   });
