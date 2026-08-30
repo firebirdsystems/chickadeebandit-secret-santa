@@ -250,17 +250,6 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     }
 
     // ── Side effects ─────────────────────────────────────────────────────────
-    function logHubActivity(type, description, exchangeId) {
-      fetch("/api/activity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type, actor: ME?.name ?? "Someone", description,
-          metadata: { deepLink: { appId: APP_ID, params: { exchangeId } } },
-        }),
-      }).catch(() => {});
-    }
-
     function notify(title, body, audience, exchangeId) {
       Promise.resolve(
         sendHubNotification({ title, body, audience, url: hubAppUrl(APP_ID, { exchangeId }) })
@@ -323,7 +312,6 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             [id, title, details, budget, date, ME?.id ?? "system", now]);
           exchanges = [{ id, title, details, budget_cents: budget, exchange_date: date, status: "open", created_by: ME?.id, created_at: now }, ...exchanges];
           currentExchangeId = id;
-          logHubActivity("exchange_created", `${ME?.name ?? "Someone"} started a gift exchange: "${title}"`, id);
           notify(`🎁 New gift exchange: ${title}`, "Tap to join before the draw!", "all", id);
           await publishEvent("secret_santa.exchange_created", id, {
             title,
@@ -424,7 +412,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         if (json.excluded_member_ids?.length) {
           hubAlert(`${json.excluded_member_ids.length} participant(s) who left the household were skipped.`);
         }
-        logHubActivity("draw_completed", `The hat was drawn for "${x.title}" 🎩`, exchangeId);
+        // No activity-feed write. /api/activity accepts only the hub's own
+        // closed type vocabulary and 403s anything else, so the
+        // "draw_completed" post that used to sit here never once landed —
+        // fetch does not reject on 4xx, so the .catch() swallowed it. The draw
+        // publishes no typed event either (this app declares only
+        // secret_santa.exchange_created), so the push below is the only notice.
         notify(`🎩 Names are drawn for ${x.title}!`, "Open Secret Santa to see who you got. Shhh!", ids, exchangeId);
       } catch (e) {
         hubAlert("The draw didn't complete.", { description: `${e.message} — run the draw again to retry.` });
