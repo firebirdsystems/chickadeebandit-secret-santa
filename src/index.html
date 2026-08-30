@@ -117,7 +117,7 @@
   <div class="container" id="app"><p class="meta">Loading…</p></div>
 
   <script type="module">
-    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl, searchMatch } from "/hub-sdk.js";
+    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl, searchMatch, logHubActivity } from "/hub-sdk.js";
     import {
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
@@ -412,13 +412,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         if (json.excluded_member_ids?.length) {
           hubAlert(`${json.excluded_member_ids.length} participant(s) who left the household were skipped.`);
         }
-        // No activity-feed write. /api/activity accepts only the hub's own
-        // closed type vocabulary and 403s anything else, so the
-        // "draw_completed" post that used to sit here never once landed —
-        // fetch does not reject on 4xx, so the .catch() swallowed it. The draw
-        // publishes no typed event either (this app declares only
-        // secret_santa.exchange_created), so the push below is the only notice.
         notify(`🎩 Names are drawn for ${x.title}!`, "Open Secret Santa to see who you got. Shhh!", ids, exchangeId);
+        // The draw is the one moment this app has no other lasting record of:
+        // it publishes no typed event (only secret_santa.exchange_created), and
+        // the push above is transient and goes only to participants.
+        //
+        // The description must never name an assignment. Who drew whom lives in
+        // `assignments`, whose row policy is sealed_until the exchange is
+        // revealed; the activity feed is household-wide and honours no app row
+        // policy, so a name here would defeat that seal outright. The exchange
+        // TITLE is safe: `exchanges` is adult_writable, which every household
+        // member already reads.
+        logHubActivity(`Names are drawn for ${x.title}`, {
+          deepLink: { appId: APP_ID, params: { exchange: exchangeId } },
+        });
       } catch (e) {
         hubAlert("The draw didn't complete.", { description: `${e.message} — run the draw again to retry.` });
       }
