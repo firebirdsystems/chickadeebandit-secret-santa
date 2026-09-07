@@ -142,3 +142,42 @@ export function parseBudgetInput(text) {
 export function searchableFields(item) {
   return [item.title, item.details];
 }
+
+// ── The calendar half ─────────────────────────────────────────────────────────
+// The exchange DATE is the only thing about an exchange that other apps have any
+// business knowing: a household that put "Christmas Exchange, Dec 20th" on the
+// board would put it on the calendar too. Who drew whom never leaves this app —
+// `assignments` is sealed_until + endpoint_writes_only and `gift_notes` is
+// owner_only, and an event on the bus is readable by every member with the app,
+// so a payload naming a pairing would defeat both policies outright. Only the
+// exchange's title and date go out.
+
+/**
+ * Whether an exchange should have an entry on the calendar at all.
+ *
+ * The date is optional in this app — an exchange can exist for weeks as "we're
+ * doing one, date TBD" — and the calendar's `create_event` requires a real
+ * `event_date`. An empty string counts as MISSING there, so publishing the
+ * calendar-bearing event for a dateless exchange fails the automation run with
+ * `missing required param` rather than doing nothing quietly. Guard first.
+ */
+export function wantsCalendarEntry(exchange) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(exchange?.exchange_date ?? ""));
+}
+
+/**
+ * Whether an edit touched anything the calendar entry is made OF. Announcing is
+ * idempotent — the calendar upserts on `source_ref_id` — but each publish still
+ * spends one automation run, and rules are rate limited per day. A budget or a
+ * details tweak cannot move the entry, so it must not re-announce.
+ *
+ * `title` DOES belong here, unlike subscriptions' equivalent: the title is the
+ * entry's whole text, there is no later cycle to carry a rename, and a renamed
+ * exchange whose calendar entry still says the old thing is the bug people
+ * report. `budget_cents` and `details` deliberately do not — and `details` is
+ * free text that is never exported anyway.
+ */
+export function exchangeCalendarInputsChanged(prev, next) {
+  if (!prev) return true;
+  return ["exchange_date", "title"].some(k => String(prev[k] ?? "") !== String(next[k] ?? ""));
+}

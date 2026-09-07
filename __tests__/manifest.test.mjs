@@ -40,6 +40,63 @@ describe("manifest.json", () => {
   });
 });
 
+// ── Calendar automation suggestions ───────────────────────────────────────────
+// The hub only offers a suggestion whose trigger has an installed publisher, and
+// a suggestion that misses a required param of its target action fails the run.
+
+describe("suggested_automations", () => {
+  const suggestions = manifest.suggested_automations ?? [];
+
+  it("ships the exchange-date pair", () => {
+    expect(suggestions.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("every trigger_event is declared in publishes", () => {
+    for (const s of suggestions) {
+      expect(manifest.publishes, `undeclared trigger: ${s.trigger_event}`).toContain(s.trigger_event);
+    }
+  });
+
+  it("every declared publish has a matching publish_acl", () => {
+    for (const name of manifest.publishes ?? []) {
+      expect(manifest.publish_acls?.[name]?.require_role, `${name} must be adult-gated`).toBe("adult");
+    }
+  });
+
+  it("every calendar create_event maps event_date and source_ref_id", () => {
+    const creates = suggestions.filter(s => s.target_app_id === "calendar" && s.action_id === "create_event");
+    expect(creates.length).toBe(1);
+    for (const s of creates) {
+      // create_event requires title and event_date; source_ref_id is what makes
+      // a moved date move the entry instead of adding a second one beside it.
+      expect(s.param_map.title?.value).toBe("title");
+      expect(s.param_map.event_date?.value).toBe("exchange_date");
+      expect(s.param_map.source_ref_id?.value).toBe("source_ref_id");
+    }
+  });
+
+  it("the retraction uses retract_dated_event and the same source_ref_id", () => {
+    const retracts = suggestions.filter(s => s.action_id === "retract_dated_event");
+    expect(retracts.length).toBe(1);
+    expect(retracts[0].target_app_id).toBe("calendar");
+    expect(retracts[0].trigger_event).toBe("secret_santa.exchange_cancelled");
+    expect(retracts[0].param_map.source_ref_id?.value).toBe("source_ref_id");
+    // A mismatched ref silently retracts nothing, so both halves must read the
+    // same payload field — and index.html publishes the same value into both.
+    const create = suggestions.find(s => s.action_id === "create_event");
+    expect(retracts[0].param_map.source_ref_id.value).toBe(create.param_map.source_ref_id.value);
+  });
+
+  it("no suggestion carries anything about the draw or the free-text details", () => {
+    // Assignments are sealed_until and gift_notes are owner_only; an automation
+    // payload is readable by every member, so a pairing must never be mapped.
+    const mapped = suggestions.flatMap(s => Object.values(s.param_map ?? {}).map(v => v.value));
+    for (const forbidden of ["details", "giver_id", "receiver_id", "body", "hint"]) {
+      expect(mapped, `${forbidden} must not reach an automation`).not.toContain(forbidden);
+    }
+  });
+});
+
 // ── ai_access SQL file validation ─────────────────────────────────────────────
 // Auto-discovers all db_exports/db_mutations/db_inserts/db_deletes entries and
 // validates each SQL file for type, household_id filter, and single-statement.

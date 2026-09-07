@@ -161,13 +161,53 @@
     }
   },
   "publishes": [
-    "secret_santa.exchange_created"
+    "secret_santa.exchange_created",
+    "secret_santa.exchange_cancelled"
   ],
   "publish_acls": {
     "secret_santa.exchange_created": {
       "require_role": "adult"
+    },
+    "secret_santa.exchange_cancelled": {
+      "require_role": "adult"
     }
   },
+  "suggested_automations": [
+    {
+      "title": "Put the gift exchange on the household calendar",
+      "description": "When an exchange gets a date \u2014 or that date moves \u2014 put it on the shared calendar, where everyone already looks for what is happening that week. Only the exchange's name and day travel: who drew whom never leaves Secret Santa, and the details you typed stay here too. Editing the date moves the entry already there instead of adding a second one.",
+      "trigger_event": "secret_santa.exchange_created",
+      "target_app_id": "calendar",
+      "action_id": "create_event",
+      "param_map": {
+        "title": {
+          "kind": "payload_field",
+          "value": "title"
+        },
+        "event_date": {
+          "kind": "payload_field",
+          "value": "exchange_date"
+        },
+        "source_ref_id": {
+          "kind": "payload_field",
+          "value": "source_ref_id"
+        }
+      }
+    },
+    {
+      "title": "Take the gift exchange back off the calendar",
+      "description": "The other half of the rule above, and it only does anything if you have that one. When an exchange is deleted, archived, or has its date cleared, the calendar entry it put there stops showing \u2014 instead of leaving a party on the calendar that nobody is having. Add both, or the entry outlives the exchange.",
+      "trigger_event": "secret_santa.exchange_cancelled",
+      "target_app_id": "calendar",
+      "action_id": "retract_dated_event",
+      "param_map": {
+        "source_ref_id": {
+          "kind": "payload_field",
+          "value": "source_ref_id"
+        }
+      }
+    }
+  ],
   "nav": {
     "label": "Secret Santa"
   },

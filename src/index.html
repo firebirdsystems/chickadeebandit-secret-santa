@@ -124,6 +124,7 @@
       drawError, statusLabel, fmtBudget, parseBudgetInput, searchableFields,
       canEditExclusions as _canEditExclusions, exclusionsOf as _exclusionsOf, exclusionError,
       drawFailureMessage,
+      wantsCalendarEntry, exchangeCalendarInputsChanged,
     } from "./logic.js";
 
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -141,8 +142,9 @@
 
     const EVENTS = window.__EVENTS_URL ?? "";
 
-    // Announce a new exchange on the cross-app bus — the date is the useful part
-    // for other apps (put it on the calendar, open a capsule for the day).
+    // Announce an exchange on the cross-app bus — the date is the useful part
+    // for other apps (put it on the calendar, open a capsule for the day) — and
+    // say when that date stops applying.
     //
     // Only the exchange itself is announced. Nothing about the draw ever goes on
     // the bus: assignments are sealed_until + endpoint_writes_only precisely so
@@ -159,6 +161,46 @@
       } catch {
         // Best-effort: the row is already written, so a failed publish is not fatal.
       }
+    }
+
+    // A steady name for whatever the exchange's date became elsewhere. The event
+    // id is fresh on every publish, so it can only say "this is a fresh event",
+    // never "this is the same exchange as last time" — and without a steady one,
+    // moving the date lands a SECOND calendar entry beside the stale first, and
+    // a retraction can never find what it made. Namespaced by app because the
+    // key shares a column with every other publisher's.
+    const calendarRefId = (id) => `secret-santa:${id}`;
+
+    // Announce the exchange's date so a rule can put it on the calendar.
+    //
+    // Title and date ONLY. `details` is free text a member typed for the
+    // household and is deliberately withheld; the draw is withheld absolutely —
+    // see the comment on wantsCalendarEntry in logic.js. Nothing about who has
+    // whom is knowable from anything published here.
+    async function announceExchangeDate(x) {
+      if (!wantsCalendarEntry(x)) return;
+      await publishEvent("secret_santa.exchange_created", x.id, {
+        source_ref_id: calendarRefId(x.id),
+        title: x.title,
+        exchange_date: x.exchange_date,
+        created_by: x.created_by ?? ME?.id ?? "unknown",
+      });
+    }
+
+    // Say the date no longer applies, so a rule can take the entry back down.
+    // Carries the SAME source_ref_id the announcement used — that is the whole
+    // mechanism; a mismatch silently retracts nothing.
+    //
+    // Not symmetric with announcing: announcing is idempotent (the calendar
+    // upserts), so re-announcing is free, but a retraction published on every
+    // save would spend an automation run to update zero rows. Only a real
+    // transition out of "has a date on the calendar" publishes one.
+    async function retractExchangeDate(x, reason) {
+      await publishEvent("secret_santa.exchange_cancelled", x.id, {
+        source_ref_id: calendarRefId(x.id),
+        title: x.title,
+        reason,
+      });
     }
 
     let members = [], memberMap = new Map();
@@ -302,10 +344,24 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       try {
         const now = new Date().toISOString();
         if (existingId) {
+          const prev = exchangeById(existingId);
+          const before = prev ? { ...prev } : null;
           await db(`UPDATE ${T.exchanges} SET title = ?, budget_cents = ?, exchange_date = ?, details = ? WHERE id = ?`,
             [title, budget, date, details, existingId]);
           const i = exchanges.findIndex(x => x.id === existingId);
           if (i !== -1) exchanges[i] = { ...exchanges[i], title, budget_cents: budget, exchange_date: date, details };
+          // The edit path used to publish nothing at all, so moving the date
+          // left the stale day standing on the calendar for good. It announces
+          // now — but only when the date or the title actually moved, so a
+          // budget or details tweak doesn't spend an automation run to rewrite
+          // the entry with the values it already has. Clearing the date is the
+          // one edit that RETRACTS: the entry it made names a day that no
+          // longer means anything.
+          const after = { id: existingId, title, exchange_date: date, created_by: before?.created_by };
+          if (exchangeCalendarInputsChanged(before, after)) {
+            if (wantsCalendarEntry(after)) await announceExchangeDate(after);
+            else if (before && wantsCalendarEntry(before)) await retractExchangeDate(after, "date_cleared");
+          }
         } else {
           const id = crypto.randomUUID();
           await db(`INSERT INTO ${T.exchanges} (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
@@ -313,11 +369,11 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           exchanges = [{ id, title, details, budget_cents: budget, exchange_date: date, status: "open", created_by: ME?.id, created_at: now }, ...exchanges];
           currentExchangeId = id;
           notify(`🎁 New gift exchange: ${title}`, "Tap to join before the draw!", "all", id);
-          await publishEvent("secret_santa.exchange_created", id, {
-            title,
-            exchange_date: date,
-            created_by: ME?.id ?? "unknown",
-          });
+          // Outside no rollback of its own: the INSERT has committed, and
+          // publishEvent is already best-effort, so a failed publish must not
+          // unwind a row that exists. A dateless exchange announces nothing —
+          // the next edit that sets a date announces then.
+          await announceExchangeDate({ id, title, exchange_date: date, created_by: ME?.id });
         }
         closeModal();
         render();
@@ -414,7 +470,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         }
         notify(`🎩 Names are drawn for ${x.title}!`, "Open Secret Santa to see who you got. Shhh!", ids, exchangeId);
         // The draw is the one moment this app has no other lasting record of:
-        // it publishes no typed event (only secret_santa.exchange_created), and
+        // it publishes no typed event (the exchange's own date events are the
+        // only ones this app has), and
         // the push above is transient and goes only to participants.
         //
         // The description must never name an assignment. Who drew whom lives in
@@ -498,11 +555,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!canManage()) return;
       if (!(await hubConfirm({ message: "Archive this exchange?", confirmLabel: "Archive" }))) return;
       try {
+        const x = exchangeById(exchangeId);
         await db(`UPDATE ${T.exchanges} SET status = 'archived' WHERE id = ?`, [exchangeId]);
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "archived" };
         currentExchangeId = null;
         render();
+        // An archived exchange is over, so its day stops standing on the shared
+        // calendar. Only if it had one to begin with — a dateless exchange
+        // never announced, and retracting for it would spend a run on nothing.
+        if (x && wantsCalendarEntry(x)) await retractExchangeDate(x, "archived");
       } catch (e) { hubAlert("Couldn't archive.", { description: e.message }); }
     };
 
@@ -537,6 +599,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         assignments = assignments.filter(a => a.exchange_id !== exchangeId);
         currentExchangeId = null;
         render();
+        // Same retraction as archiving, and it matters more here: the row is
+        // gone, so nothing in this app will ever mention that day again.
+        if (wantsCalendarEntry(x)) await retractExchangeDate(x, "deleted");
       } catch (e) { hubAlert("Couldn't delete.", { description: e.message }); }
     };
 

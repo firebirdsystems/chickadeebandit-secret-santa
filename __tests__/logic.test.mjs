@@ -10,6 +10,7 @@ import {
   parseBudgetInput, searchableFields,
   canEditExclusions, exclusionsOf, pairKey, isExcludedPair, exclusionError,
   drawFailureMessage,
+  wantsCalendarEntry, exchangeCalendarInputsChanged,
 } from "../src/logic.js";
 
 const adult = { id: "a1", name: "Alex", role: "adult" };
@@ -150,5 +151,51 @@ describe("searchableFields", () => {
   it("matches on the details, not just the exchange title", () => {
     expect(searchableFields({ title: "Christmas", details: "£20 budget, cousins only" }))
       .toContain("£20 budget, cousins only");
+  });
+});
+
+// ── The calendar half ─────────────────────────────────────────────────────────
+// The shipped suggestion turns secret_santa.exchange_created into the calendar's
+// create_event, whose event_date is REQUIRED — an empty one fails the automation
+// run with `missing required param`, so the guard is the point of these tests.
+
+describe("wantsCalendarEntry", () => {
+  it("requires a full yyyy-mm-dd date", () => {
+    expect(wantsCalendarEntry({ exchange_date: "2026-12-20" })).toBe(true);
+    expect(wantsCalendarEntry({ exchange_date: "" })).toBe(false);
+    expect(wantsCalendarEntry({ exchange_date: null })).toBe(false);
+    expect(wantsCalendarEntry({})).toBe(false);
+    expect(wantsCalendarEntry(null)).toBe(false);
+    // A partial date is worse than none: it would reach the calendar as a day.
+    expect(wantsCalendarEntry({ exchange_date: "2026-12" })).toBe(false);
+  });
+});
+
+describe("exchangeCalendarInputsChanged", () => {
+  const base = { id: "e1", title: "Christmas Exchange", exchange_date: "2026-12-20", budget_cents: 2500, details: "cousins only" };
+
+  it("fires when the date moves or is cleared", () => {
+    expect(exchangeCalendarInputsChanged(base, { ...base, exchange_date: "2026-12-21" })).toBe(true);
+    expect(exchangeCalendarInputsChanged(base, { ...base, exchange_date: null })).toBe(true);
+  });
+
+  it("fires when the title changes — the entry's whole text", () => {
+    expect(exchangeCalendarInputsChanged(base, { ...base, title: "Xmas Exchange" })).toBe(true);
+  });
+
+  it("stays quiet for an edit that cannot move the entry", () => {
+    expect(exchangeCalendarInputsChanged(base, { ...base, budget_cents: 4000 })).toBe(false);
+    expect(exchangeCalendarInputsChanged(base, { ...base, details: "bring wrapping paper" })).toBe(false);
+    expect(exchangeCalendarInputsChanged(base, { ...base })).toBe(false);
+  });
+
+  it("treats a brand-new exchange as changed", () => {
+    expect(exchangeCalendarInputsChanged(null, base)).toBe(true);
+  });
+
+  it("covers both transitions in and out of wanting an entry", () => {
+    const dateless = { ...base, exchange_date: null };
+    expect(exchangeCalendarInputsChanged(dateless, base) && wantsCalendarEntry(base)).toBe(true);
+    expect(exchangeCalendarInputsChanged(base, dateless) && wantsCalendarEntry(base) && !wantsCalendarEntry(dateless)).toBe(true);
   });
 });
