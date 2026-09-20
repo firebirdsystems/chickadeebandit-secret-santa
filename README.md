@@ -1,5 +1,7 @@
 # Secret Santa 🎅
 
+A [Chickadee Bandit](https://chickadeebandit.com/app-library/secret-santa) app.
+
 A Chickadee Bandit marketplace app for family and office-style gift exchanges — the flagship app for the hub's `secret_draw` protocol.
 
 ## What it does
