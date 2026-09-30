@@ -28,6 +28,13 @@
     "requires_approval": false
   },
   "storage": "db",
+  "preload": {
+    "exchanges": {"sql": "SELECT * FROM app_secret_santa__exchanges ORDER BY created_at DESC"},
+    "participants": {"sql": "SELECT * FROM app_secret_santa__participants"},
+    "assignments": {"sql": "SELECT * FROM app_secret_santa__assignments"},
+    "gift_notes": {"sql": "SELECT * FROM app_secret_santa__gift_notes"},
+    "exclusions": {"sql": "SELECT * FROM app_secret_santa__exclusions"}
+  },
   "db_plaintext_columns": [
     "exchange_date",
     "visibility"
