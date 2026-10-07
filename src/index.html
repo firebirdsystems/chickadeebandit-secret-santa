@@ -117,7 +117,7 @@
   <div class="container" id="app"><p class="meta">Loading…</p></div>
 
   <script type="module">
-    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl, searchMatch, logHubActivity } from "/hub-sdk.js";
+    import { memberColor, initial, esc, hubConfirm, hubAlert, sendHubNotification, hubAppUrl, searchMatch, logHubActivity, glyph, chickadee } from "/hub-sdk.js";
     import {
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
@@ -665,17 +665,17 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       return `
         ${demo ? `<div class="banner">Demo mode — showing sample data. Install in your hub to run a real exchange.</div>` : ""}
         <div class="row spread">
-          <div><h1>🎅 Secret Santa</h1><p class="subtitle">Gift exchanges where the draw stays secret — even from the organizer.</p></div>
+          <div><h1>${glyph("gift")} Secret Santa</h1><p class="subtitle">Gift exchanges where the draw stays secret — even from the organizer.</p></div>
           ${canManage() ? `<button class="btn" data-testid="new-exchange-btn" onclick="openExchangeModal(null)">New exchange</button>` : ""}
         </div>
         ${exchanges.length ? `<div class="search-row"><input id="search" data-testid="field-search" class="search-input" type="search" placeholder="Search exchanges…" aria-label="Search exchanges" value="${esc(searchQ)}" /></div>` : ""}
         ${active.length === 0 ? (searchQ && archived.length === 0 ? `
           <div class="card empty">
-            <div style="font-size:2rem">🔍</div>
+            <div>${chickadee("searching")}</div>
             <p style="margin-top:8px">Nothing matches "${esc(searchQ)}".</p>
           </div>` : `
           <div class="card empty">
-            <div style="font-size:2rem">🎁</div>
+            <div>${chickadee("nest")}</div>
             <p style="margin-top:8px">No gift exchanges yet.</p>
             ${canManage() ? `<p class="meta" style="margin-top:4px">Create one and let everyone join before the draw.</p>`
                           : `<p class="meta" style="margin-top:4px">Ask an adult to start one.</p>`}
@@ -735,7 +735,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
               ${avatarHtml(p.member_id)}
               <div>
                 <div>${esc(memberName(p.member_id))}${p.member_id === ME?.id ? ' <span class="meta">(you)</span>' : ""}</div>
-                ${p.hint ? `<div class="hint-text" data-testid="participant-hint">🎯 ${esc(p.hint)}</div>` : ""}
+                ${p.hint ? `<div class="hint-text" data-testid="participant-hint">${glyph("goal-ring")} ${esc(p.hint)}</div>` : ""}
               </div>
             </div>`).join("")}
           ${x.status === "open" && ME ? `
@@ -759,9 +759,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <div class="section-title">Organizer</div>
           <div class="card">
             <div class="row">
-              ${x.status === "open" ? `<button class="btn" data-testid="draw-btn" onclick="runDraw('${x.id}', false)">🎩 Draw names</button>` : ""}
+              ${x.status === "open" ? `<button class="btn" data-testid="draw-btn" onclick="runDraw('${x.id}', false)">${glyph("dice", { accent: "currentColor" })} Draw names</button>` : ""}
               ${x.status === "drawn" ? `
-                <button class="btn" data-testid="reveal-btn" onclick="revealExchange('${x.id}')">🎉 Reveal pairings</button>
+                <button class="btn" data-testid="reveal-btn" onclick="revealExchange('${x.id}')">${glyph("party", { accent: "currentColor" })} Reveal pairings</button>
                 <button class="btn ghost" data-testid="redraw-btn" onclick="runDraw('${x.id}', true)">Re-draw</button>` : ""}
               ${x.status !== "archived" ? `<button class="btn ghost" onclick="openExchangeModal('${x.id}')">Edit</button>` : ""}
               ${x.status !== "archived" ? `<button class="btn ghost" onclick="archiveExchange('${x.id}')">Archive</button>` : ""}
@@ -789,7 +789,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           ${rules.length === 0 ? `<p class="meta">No rules yet — anyone can draw anyone.</p>` : rules.map(r => `
             <div class="rule-row" data-testid="rule-row" data-rule-id="${esc(r.id)}">
               <span class="grow">${esc(memberName(r.member_a_id))} &amp; ${esc(memberName(r.member_b_id))} won't get each other</span>
-              ${editable ? `<button class="icon-btn" title="Remove rule" aria-label="Remove rule" data-testid="rule-remove-btn" onclick="removeExclusion('${esc(r.id)}')">✕</button>` : ""}
+              ${editable ? `<button class="icon-btn" title="Remove rule" aria-label="Remove rule" data-testid="rule-remove-btn" onclick="removeExclusion('${esc(r.id)}')">${glyph("close", { accent: "currentColor" })}</button>` : ""}
             </div>`).join("")}
           ${editable ? `
             <div class="rule-add" data-testid="rule-add">
@@ -812,9 +812,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       return `
         <div class="card assignment-card" data-testid="assignment-card">
           <div class="meta">You're the Secret Santa for</div>
-          <div class="assignment-name" data-testid="assignment-name">🎁 ${esc(r?.name ?? "Former member")}</div>
+          <div class="assignment-name" data-testid="assignment-name">${glyph("gift")} ${esc(r?.name ?? "Former member")}</div>
           ${fmtBudget(x.budget_cents) ? `<div class="meta">Keep it around ${esc(fmtBudget(x.budget_cents))}</div>` : ""}
-          ${hint ? `<div class="hint-text" data-testid="assignment-hint" style="margin-top:8px">🎯 Their hint: ${esc(hint)}</div>` : ""}
+          ${hint ? `<div class="hint-text" data-testid="assignment-hint" style="margin-top:8px">${glyph("goal-ring")} Their hint: ${esc(hint)}</div>` : ""}
           <div class="row" style="justify-content:center;margin-top:14px">
             <button class="btn ghost small" onclick="openWishlist()">Browse their Wish List</button>
           </div>
@@ -831,7 +831,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     function renderReveals(x) {
       const rs = assignmentsOf(x);
       return `
-        <div class="section-title">The big reveal 🎉</div>
+        <div class="section-title">The big reveal ${glyph("party")}</div>
         <div class="card" data-testid="reveal-list">
           ${rs.length === 0 ? `<p class="meta">No pairings to show. Try refreshing.</p>` : rs.map(r => `
             <div class="reveal-row" data-testid="reveal-row" data-giver-id="${esc(r.giver_id)}">

@@ -3,7 +3,7 @@ export { isAdult };
 
 export const STATUS_LABELS = {
   open:     "Open — joining",
-  drawn:    "Drawn 🎩",
+  drawn:    "Drawn",
   revealed: "Revealed",
   archived: "Archived",
 };
