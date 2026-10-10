@@ -1,0 +1,1219 @@
+{
+  "seed": [
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-12 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+0 minutes'))",
+      "params": [
+        "perf-x-01",
+        "Holiday Gift Exchange",
+        "Wrapped and under the tree by the 24th. Homemade counts double.",
+        2500,
+        "{{date:76}}",
+        "drawn",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+0 minutes'))",
+      "params": [
+        "perf-p-001",
+        "perf-x-01",
+        "{{me}}",
+        "everyone",
+        "Anything with cinnamon"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+1 minutes'))",
+      "params": [
+        "perf-p-002",
+        "perf-x-01",
+        "{{partner}}",
+        "everyone",
+        "Gardening gloves, size medium"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+2 minutes'))",
+      "params": [
+        "perf-p-003",
+        "perf-x-01",
+        "{{adult2}}",
+        "everyone",
+        "Loose-leaf tea or a nice mug"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+3 minutes'))",
+      "params": [
+        "perf-p-004",
+        "perf-x-01",
+        "{{child}}",
+        "everyone",
+        "Loves dinosaurs and LEGO"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+4 minutes'))",
+      "params": [
+        "perf-p-005",
+        "perf-x-01",
+        "{{child2}}",
+        "everyone",
+        "Stickers and glitter pens"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+0 minutes'))",
+      "params": [
+        "perf-a-001",
+        "perf-x-01",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+1 minutes'))",
+      "params": [
+        "perf-a-002",
+        "perf-x-01",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+2 minutes'))",
+      "params": [
+        "perf-a-003",
+        "perf-x-01",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+3 minutes'))",
+      "params": [
+        "perf-a-004",
+        "perf-x-01",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days','+4 minutes'))",
+      "params": [
+        "perf-a-005",
+        "perf-x-01",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','+0 minutes'))",
+      "params": [
+        "perf-n-001",
+        "perf-x-01",
+        "{{me}}",
+        "Saw a ceramic planter at the farmers market, go back Saturday."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','+1 minutes'))",
+      "params": [
+        "perf-n-002",
+        "perf-x-01",
+        "{{partner}}",
+        "Idea: the dinosaur atlas from the bookshop window. Backup: a fossil dig kit."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-8 days','+2 minutes'))",
+      "params": [
+        "perf-n-003",
+        "perf-x-01",
+        "{{adult2}}",
+        "Already ordered, arrives next week. Hide it in the garage."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+0 minutes'))",
+      "params": [
+        "perf-e-001",
+        "perf-x-01",
+        "{{me}}",
+        "{{partner}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11 days','+1 minutes'))",
+      "params": [
+        "perf-e-002",
+        "perf-x-01",
+        "{{child}}",
+        "{{child2}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+1 minutes'))",
+      "params": [
+        "perf-x-02",
+        "Cousins' White Elephant",
+        "Bring something funny. Stealing is allowed, grudges are not.",
+        1500,
+        "{{date:80}}",
+        "open",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+0 minutes'))",
+      "params": [
+        "perf-p-006",
+        "perf-x-02",
+        "{{me}}",
+        "everyone",
+        "Good coffee beans, whole not ground"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+1 minutes'))",
+      "params": [
+        "perf-p-007",
+        "perf-x-02",
+        "{{partner}}",
+        "everyone",
+        "Dark chocolate, the darker the better"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+2 minutes'))",
+      "params": [
+        "perf-p-008",
+        "perf-x-02",
+        "{{child}}",
+        "everyone",
+        "Graphic novels, anything with dragons"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+3 minutes'))",
+      "params": [
+        "perf-p-009",
+        "perf-x-02",
+        "{{child2}}",
+        "everyone",
+        "Stuffed animals, especially foxes"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+0 minutes'))",
+      "params": [
+        "perf-n-004",
+        "perf-x-02",
+        "{{me}}",
+        "Idea: the dinosaur atlas from the bookshop window. Backup: a fossil dig kit."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+0 minutes'))",
+      "params": [
+        "perf-e-003",
+        "perf-x-02",
+        "{{me}}",
+        "{{partner}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-20 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+0 minutes'))",
+      "params": [
+        "perf-x-03",
+        "Halloween Treat Swap",
+        "One spooky treat bag each, nothing with peanuts.",
+        1000,
+        "{{date:22}}",
+        "drawn",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+0 minutes'))",
+      "params": [
+        "perf-p-010",
+        "perf-x-03",
+        "{{me}}",
+        "everyone",
+        "A new paperback mystery"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+1 minutes'))",
+      "params": [
+        "perf-p-011",
+        "perf-x-03",
+        "{{partner}}",
+        "everyone",
+        "A candle that smells like pine"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+2 minutes'))",
+      "params": [
+        "perf-p-012",
+        "perf-x-03",
+        "{{adult2}}",
+        "everyone",
+        "Fountain pen ink"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+3 minutes'))",
+      "params": [
+        "perf-p-013",
+        "perf-x-03",
+        "{{child}}",
+        "everyone",
+        "Art markers"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+4 minutes'))",
+      "params": [
+        "perf-p-014",
+        "perf-x-03",
+        "{{child2}}",
+        "everyone",
+        "Slime kit"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+0 minutes'))",
+      "params": [
+        "perf-a-006",
+        "perf-x-03",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+1 minutes'))",
+      "params": [
+        "perf-a-007",
+        "perf-x-03",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+2 minutes'))",
+      "params": [
+        "perf-a-008",
+        "perf-x-03",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+3 minutes'))",
+      "params": [
+        "perf-a-009",
+        "perf-x-03",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days','+4 minutes'))",
+      "params": [
+        "perf-a-010",
+        "perf-x-03",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-16 days','+0 minutes'))",
+      "params": [
+        "perf-n-005",
+        "perf-x-03",
+        "{{me}}",
+        "Already ordered, arrives next week. Hide it in the garage."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-16 days','+1 minutes'))",
+      "params": [
+        "perf-n-006",
+        "perf-x-03",
+        "{{partner}}",
+        "Maybe a framed photo from the lake trip?"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-16 days','+2 minutes'))",
+      "params": [
+        "perf-n-007",
+        "perf-x-03",
+        "{{adult2}}",
+        "Ask about shoe size without being obvious."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+0 minutes'))",
+      "params": [
+        "perf-e-004",
+        "perf-x-03",
+        "{{me}}",
+        "{{partner}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-19 days','+1 minutes'))",
+      "params": [
+        "perf-e-005",
+        "perf-x-03",
+        "{{child}}",
+        "{{child2}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+3 minutes'))",
+      "params": [
+        "perf-x-04",
+        "Book Swap",
+        "A book you loved this year, wrapped in newspaper.",
+        2000,
+        "{{date:35}}",
+        "open",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+0 minutes'))",
+      "params": [
+        "perf-p-015",
+        "perf-x-04",
+        "{{adult2}}",
+        "everyone",
+        "A plant that is hard to kill"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+1 minutes'))",
+      "params": [
+        "perf-p-016",
+        "perf-x-04",
+        "{{partner}}",
+        "everyone",
+        "Puzzle with 1000 pieces"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+2 minutes'))",
+      "params": [
+        "perf-p-017",
+        "perf-x-04",
+        "{{child}}",
+        "everyone",
+        "Soccer stuff"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','-3 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','+0 days','-3 minutes'))",
+      "params": [
+        "perf-n-008",
+        "perf-x-04",
+        "{{adult2}}",
+        "Maybe a framed photo from the lake trip?"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-60 days','+4 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-35 days','+0 minutes'))",
+      "params": [
+        "perf-x-05",
+        "Back-to-School Surprise",
+        "A small something for the first week back.",
+        1200,
+        "{{date:-38}}",
+        "revealed",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+0 minutes'))",
+      "params": [
+        "perf-p-018",
+        "perf-x-05",
+        "{{me}}",
+        "everyone",
+        "Anything with cinnamon"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+1 minutes'))",
+      "params": [
+        "perf-p-019",
+        "perf-x-05",
+        "{{partner}}",
+        "everyone",
+        "Gardening gloves, size medium"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+2 minutes'))",
+      "params": [
+        "perf-p-020",
+        "perf-x-05",
+        "{{child}}",
+        "everyone",
+        "Loves dinosaurs and LEGO"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+3 minutes'))",
+      "params": [
+        "perf-p-021",
+        "perf-x-05",
+        "{{child2}}",
+        "everyone",
+        "Stickers and glitter pens"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days','+0 minutes'))",
+      "params": [
+        "perf-a-011",
+        "perf-x-05",
+        "{{me}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days','+1 minutes'))",
+      "params": [
+        "perf-a-012",
+        "perf-x-05",
+        "{{partner}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days','+2 minutes'))",
+      "params": [
+        "perf-a-013",
+        "perf-x-05",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days','+3 minutes'))",
+      "params": [
+        "perf-a-014",
+        "perf-x-05",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-56 days','+0 minutes'))",
+      "params": [
+        "perf-n-009",
+        "perf-x-05",
+        "{{me}}",
+        "Ask about shoe size without being obvious."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-56 days','+1 minutes'))",
+      "params": [
+        "perf-n-010",
+        "perf-x-05",
+        "{{partner}}",
+        "Bake the ginger cookies and add the recipe card."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-56 days','+2 minutes'))",
+      "params": [
+        "perf-n-011",
+        "perf-x-05",
+        "{{child}}",
+        "Saw a ceramic planter at the farmers market, go back Saturday."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+0 minutes'))",
+      "params": [
+        "perf-e-006",
+        "perf-x-05",
+        "{{me}}",
+        "{{partner}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110 days','+5 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-85 days','+0 minutes'))",
+      "params": [
+        "perf-x-06",
+        "Summer Birthday Mix-Up",
+        "Everyone with a summer birthday gets a secret gift.",
+        3000,
+        "{{date:-85}}",
+        "revealed",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+0 minutes'))",
+      "params": [
+        "perf-p-022",
+        "perf-x-06",
+        "{{me}}",
+        "everyone",
+        "Good coffee beans, whole not ground"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+1 minutes'))",
+      "params": [
+        "perf-p-023",
+        "perf-x-06",
+        "{{partner}}",
+        "everyone",
+        "Dark chocolate, the darker the better"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+2 minutes'))",
+      "params": [
+        "perf-p-024",
+        "perf-x-06",
+        "{{adult2}}",
+        "everyone",
+        "Hot sauce, surprise me"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+3 minutes'))",
+      "params": [
+        "perf-p-025",
+        "perf-x-06",
+        "{{child}}",
+        "everyone",
+        "Graphic novels, anything with dragons"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+4 minutes'))",
+      "params": [
+        "perf-p-026",
+        "perf-x-06",
+        "{{child2}}",
+        "everyone",
+        "Stuffed animals, especially foxes"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+0 minutes'))",
+      "params": [
+        "perf-a-015",
+        "perf-x-06",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+1 minutes'))",
+      "params": [
+        "perf-a-016",
+        "perf-x-06",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+2 minutes'))",
+      "params": [
+        "perf-a-017",
+        "perf-x-06",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+3 minutes'))",
+      "params": [
+        "perf-a-018",
+        "perf-x-06",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-108 days','+4 minutes'))",
+      "params": [
+        "perf-a-019",
+        "perf-x-06",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-107 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-106 days','+0 minutes'))",
+      "params": [
+        "perf-n-012",
+        "perf-x-06",
+        "{{me}}",
+        "Bake the ginger cookies and add the recipe card."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-107 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-106 days','+1 minutes'))",
+      "params": [
+        "perf-n-013",
+        "perf-x-06",
+        "{{partner}}",
+        "Saw a ceramic planter at the farmers market, go back Saturday."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-107 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-106 days','+2 minutes'))",
+      "params": [
+        "perf-n-014",
+        "perf-x-06",
+        "{{adult2}}",
+        "Idea: the dinosaur atlas from the bookshop window. Backup: a fossil dig kit."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exclusions (id, exchange_id, member_a_id, member_b_id, created_by, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-109 days','+0 minutes'))",
+      "params": [
+        "perf-e-007",
+        "perf-x-06",
+        "{{me}}",
+        "{{partner}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-210 days','+6 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-185 days','+0 minutes'))",
+      "params": [
+        "perf-x-07",
+        "Easter Basket Exchange",
+        "Fill a basket for the person you drew.",
+        2000,
+        "{{date:-180}}",
+        "archived",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-209 days','+0 minutes'))",
+      "params": [
+        "perf-p-027",
+        "perf-x-07",
+        "{{me}}",
+        "everyone",
+        "A new paperback mystery"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-209 days','+1 minutes'))",
+      "params": [
+        "perf-p-028",
+        "perf-x-07",
+        "{{partner}}",
+        "everyone",
+        "A candle that smells like pine"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-209 days','+2 minutes'))",
+      "params": [
+        "perf-p-029",
+        "perf-x-07",
+        "{{adult2}}",
+        "everyone",
+        "Fountain pen ink"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-209 days','+3 minutes'))",
+      "params": [
+        "perf-p-030",
+        "perf-x-07",
+        "{{child}}",
+        "everyone",
+        "Art markers"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-209 days','+4 minutes'))",
+      "params": [
+        "perf-p-031",
+        "perf-x-07",
+        "{{child2}}",
+        "everyone",
+        "Slime kit"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+0 minutes'))",
+      "params": [
+        "perf-a-020",
+        "perf-x-07",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+1 minutes'))",
+      "params": [
+        "perf-a-021",
+        "perf-x-07",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+2 minutes'))",
+      "params": [
+        "perf-a-022",
+        "perf-x-07",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+3 minutes'))",
+      "params": [
+        "perf-a-023",
+        "perf-x-07",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-208 days','+4 minutes'))",
+      "params": [
+        "perf-a-024",
+        "perf-x-07",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-207 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-206 days','+0 minutes'))",
+      "params": [
+        "perf-n-015",
+        "perf-x-07",
+        "{{me}}",
+        "Saw a ceramic planter at the farmers market, go back Saturday."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-207 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-206 days','+1 minutes'))",
+      "params": [
+        "perf-n-016",
+        "perf-x-07",
+        "{{partner}}",
+        "Idea: the dinosaur atlas from the bookshop window. Backup: a fossil dig kit."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-207 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-206 days','+2 minutes'))",
+      "params": [
+        "perf-n-017",
+        "perf-x-07",
+        "{{adult2}}",
+        "Already ordered, arrives next week. Hide it in the garage."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-320 days','+7 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-318 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-295 days','+0 minutes'))",
+      "params": [
+        "perf-x-08",
+        "Last Year's Holiday Exchange",
+        "Same rules as always.",
+        2500,
+        "{{date:-289}}",
+        "archived",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-319 days','+0 minutes'))",
+      "params": [
+        "perf-p-032",
+        "perf-x-08",
+        "{{me}}",
+        "everyone",
+        "Wool socks, size 10"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-319 days','+1 minutes'))",
+      "params": [
+        "perf-p-033",
+        "perf-x-08",
+        "{{partner}}",
+        "everyone",
+        "Puzzle with 1000 pieces"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-319 days','+2 minutes'))",
+      "params": [
+        "perf-p-034",
+        "perf-x-08",
+        "{{child}}",
+        "everyone",
+        "Soccer stuff"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-319 days','+3 minutes'))",
+      "params": [
+        "perf-p-035",
+        "perf-x-08",
+        "{{child2}}",
+        "everyone",
+        "Friendship bracelet string"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-318 days','+0 minutes'))",
+      "params": [
+        "perf-a-025",
+        "perf-x-08",
+        "{{me}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-318 days','+1 minutes'))",
+      "params": [
+        "perf-a-026",
+        "perf-x-08",
+        "{{partner}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-318 days','+2 minutes'))",
+      "params": [
+        "perf-a-027",
+        "perf-x-08",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-318 days','+3 minutes'))",
+      "params": [
+        "perf-a-028",
+        "perf-x-08",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-317 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-316 days','+0 minutes'))",
+      "params": [
+        "perf-n-018",
+        "perf-x-08",
+        "{{me}}",
+        "Idea: the dinosaur atlas from the bookshop window. Backup: a fossil dig kit."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-317 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-316 days','+1 minutes'))",
+      "params": [
+        "perf-n-019",
+        "perf-x-08",
+        "{{partner}}",
+        "Already ordered, arrives next week. Hide it in the garage."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-317 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-316 days','+2 minutes'))",
+      "params": [
+        "perf-n-020",
+        "perf-x-08",
+        "{{child}}",
+        "Maybe a framed photo from the lake trip?"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-260 days','+8 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-235 days','+0 minutes'))",
+      "params": [
+        "perf-x-09",
+        "Valentine Notes",
+        "No budget, just a handwritten note.",
+        "{{date:-237}}",
+        "archived",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-259 days','+0 minutes'))",
+      "params": [
+        "perf-p-036",
+        "perf-x-09",
+        "{{me}}",
+        "everyone",
+        "Anything with cinnamon"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-259 days','+1 minutes'))",
+      "params": [
+        "perf-p-037",
+        "perf-x-09",
+        "{{partner}}",
+        "everyone",
+        "Gardening gloves, size medium"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-259 days','+2 minutes'))",
+      "params": [
+        "perf-p-038",
+        "perf-x-09",
+        "{{adult2}}",
+        "everyone",
+        "Loose-leaf tea or a nice mug"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-259 days','+3 minutes'))",
+      "params": [
+        "perf-p-039",
+        "perf-x-09",
+        "{{child}}",
+        "everyone",
+        "Loves dinosaurs and LEGO"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-259 days','+4 minutes'))",
+      "params": [
+        "perf-p-040",
+        "perf-x-09",
+        "{{child2}}",
+        "everyone",
+        "Stickers and glitter pens"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+0 minutes'))",
+      "params": [
+        "perf-a-029",
+        "perf-x-09",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+1 minutes'))",
+      "params": [
+        "perf-a-030",
+        "perf-x-09",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+2 minutes'))",
+      "params": [
+        "perf-a-031",
+        "perf-x-09",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+3 minutes'))",
+      "params": [
+        "perf-a-032",
+        "perf-x-09",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-258 days','+4 minutes'))",
+      "params": [
+        "perf-a-033",
+        "perf-x-09",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-257 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-256 days','+0 minutes'))",
+      "params": [
+        "perf-n-021",
+        "perf-x-09",
+        "{{me}}",
+        "Already ordered, arrives next week. Hide it in the garage."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-257 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-256 days','+1 minutes'))",
+      "params": [
+        "perf-n-022",
+        "perf-x-09",
+        "{{partner}}",
+        "Maybe a framed photo from the lake trip?"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-257 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-256 days','+2 minutes'))",
+      "params": [
+        "perf-n-023",
+        "perf-x-09",
+        "{{adult2}}",
+        "Ask about shoe size without being obvious."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__exchanges (id, title, details, budget_cents, exchange_date, status, created_by, created_at, drawn_at, revealed_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-140 days','+9 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-115 days','+0 minutes'))",
+      "params": [
+        "perf-x-10",
+        "Teacher Thank-You Draw",
+        "Each of us picks up a thank-you gift for one teacher helper.",
+        1500,
+        "{{date:-120}}",
+        "revealed",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-139 days','+0 minutes'))",
+      "params": [
+        "perf-p-041",
+        "perf-x-10",
+        "{{me}}",
+        "everyone",
+        "Good coffee beans, whole not ground"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-139 days','+1 minutes'))",
+      "params": [
+        "perf-p-042",
+        "perf-x-10",
+        "{{partner}}",
+        "everyone",
+        "Dark chocolate, the darker the better"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-139 days','+2 minutes'))",
+      "params": [
+        "perf-p-043",
+        "perf-x-10",
+        "{{adult2}}",
+        "everyone",
+        "Hot sauce, surprise me"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-139 days','+3 minutes'))",
+      "params": [
+        "perf-p-044",
+        "perf-x-10",
+        "{{child}}",
+        "everyone",
+        "Graphic novels, anything with dragons"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__participants (id, exchange_id, member_id, visibility, hint, created_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-139 days','+4 minutes'))",
+      "params": [
+        "perf-p-045",
+        "perf-x-10",
+        "{{child2}}",
+        "everyone",
+        "Stuffed animals, especially foxes"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+0 minutes'))",
+      "params": [
+        "perf-a-034",
+        "perf-x-10",
+        "{{me}}",
+        "{{adult2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+1 minutes'))",
+      "params": [
+        "perf-a-035",
+        "perf-x-10",
+        "{{partner}}",
+        "{{child}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+2 minutes'))",
+      "params": [
+        "perf-a-036",
+        "perf-x-10",
+        "{{adult2}}",
+        "{{child2}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+3 minutes'))",
+      "params": [
+        "perf-a-037",
+        "perf-x-10",
+        "{{child}}",
+        "{{me}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__assignments (id, exchange_id, giver_id, receiver_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-138 days','+4 minutes'))",
+      "params": [
+        "perf-a-038",
+        "perf-x-10",
+        "{{child2}}",
+        "{{partner}}"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-137 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-136 days','+0 minutes'))",
+      "params": [
+        "perf-n-024",
+        "perf-x-10",
+        "{{me}}",
+        "Maybe a framed photo from the lake trip?"
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-137 days','+1 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-136 days','+1 minutes'))",
+      "params": [
+        "perf-n-025",
+        "perf-x-10",
+        "{{partner}}",
+        "Ask about shoe size without being obvious."
+      ]
+    },
+    {
+      "sql": "INSERT INTO app_secret_santa__gift_notes (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-137 days','+2 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-136 days','+2 minutes'))",
+      "params": [
+        "perf-n-026",
+        "perf-x-10",
+        "{{adult2}}",
+        "Bake the ginger cookies and add the recipe card."
+      ]
+    }
+  ]
+}
