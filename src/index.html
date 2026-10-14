@@ -127,6 +127,7 @@
       canEditExclusions as _canEditExclusions, exclusionsOf as _exclusionsOf, exclusionError,
       drawFailureMessage,
       wantsCalendarEntry, exchangeCalendarInputsChanged,
+      outcomeUnknown, storedDiffers, SAVED_AS_FIRST, failureLine,
     } from "./logic.js";
 
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -220,16 +221,36 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         body: JSON.stringify({ sql, params }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error(json?.error || `DB error (${res.status})`);
+      if (!res.ok || !json || typeof json !== "object" || json.error) throw Object.assign(new Error(json?.error || `DB error (${res.status})`), { status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
       return json;
     }
 
-    // What a failed write shows: this app's own wording when the error carries
-    // it, otherwise one fixed line. The hub's error text only goes to the console.
-    function alertFailed(what, e) {
+    // What a failed write shows: failureLine's line for the action (this app's
+    // own wording when the error carries it). The hub's text only goes to the console.
+    function alertFailed(action, thing, e) {
       if (!e?.forUser) console.error("[secret-santa] write failed:", e);
-      if (e?.forUser) hubAlert(`Couldn’t ${what}`, { description: e.message });
-      else hubAlert(`Couldn’t ${what} — try again.`);
+      hubAlert(failureLine(e, { action, thing, found: e?.found }));
+    }
+
+    // A write the hub narrowed answers 200 with nothing changed. Re-read the row
+    // so the catch can say "removed" (gone) or the permission line (still there;
+    // every write here is a plain WHERE id = ?).
+    async function mustChange(res, table, id) {
+      if (Number(res?.changed ?? 1) !== 0) return;
+      let found = null;
+      try { found = ((await db(`SELECT id FROM ${table} WHERE id = ? LIMIT 1`, [id])).rows?.length ?? 0) > 0; }
+      catch (readErr) { console.error(readErr); }
+      throw Object.assign(new Error("write changed nothing"), { found });
+    }
+
+    // Participants and gift notes are capped at one row per member and
+    // exchange, so a retry whose first try landed unheard is refused (403) or
+    // answered UNIQUE. Read this member's row back: the row, null (none, or the
+    // outcome was known), or undefined (the read failed, so nothing is known).
+    async function myStoredRow(table, exchangeId, e) {
+      if (!outcomeUnknown(e) && e?.status !== 403) return null;
+      try { return (await db(`SELECT * FROM ${table} WHERE exchange_id = ? AND member_id = ? LIMIT 1`, [exchangeId, ME.id])).rows?.[0] ?? null; }
+      catch (readErr) { console.error(readErr); return undefined; }
     }
 
     // ── Data loading ─────────────────────────────────────────────────────────
@@ -352,15 +373,17 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const date    = document.getElementById("f-date").value || null;
       const details = document.getElementById("f-details").value.trim() || null;
 
-      const btn = modalEl?.querySelector(".modal-actions .btn-primary");
+      const host = modalEl;
+      const btn = host?.querySelector(".modal-actions .btn-primary");
       if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+      let created = null, note = "";
       try {
         const now = new Date().toISOString();
         if (existingId) {
           const prev = exchangeById(existingId);
           const before = prev ? { ...prev } : null;
-          await db(`UPDATE ${T.exchanges} SET title = ?, budget_cents = ?, exchange_date = ?, details = ? WHERE id = ?`,
-            [title, budget, date, details, existingId]);
+          await mustChange(await db(`UPDATE ${T.exchanges} SET title = ?, budget_cents = ?, exchange_date = ?, details = ? WHERE id = ?`,
+            [title, budget, date, details, existingId]), T.exchanges, existingId);
           const i = exchanges.findIndex(x => x.id === existingId);
           if (i !== -1) exchanges[i] = { ...exchanges[i], title, budget_cents: budget, exchange_date: date, details };
           // The edit path used to publish nothing at all, so moving the date
@@ -376,24 +399,52 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             else if (before && wantsCalendarEntry(before)) await retractExchangeDate(after, "date_cleared");
           }
         } else {
-          const id = crypto.randomUUID();
-          await db(`INSERT INTO ${T.exchanges} (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
-            [id, title, details, budget, date, ME?.id ?? "system", now]);
-          exchanges = [{ id, title, details, budget_cents: budget, exchange_date: date, status: "open", created_by: ME?.id, created_at: now }, ...exchanges];
+          // The id is the form's, minted on its first Create and sent on every
+          // retry: a try whose answer was lost may have stored the exchange, and
+          // a second press must find it rather than make (and announce) another.
+          const id = host ? (host.dataset.rowId ||= crypto.randomUUID()) : crypto.randomUUID();
+          created = { id, title, details, budget_cents: budget, exchange_date: date, status: "open", created_by: ME?.id, created_at: now };
+          try {
+            await db(`INSERT INTO ${T.exchanges} (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
+              [id, title, details, budget, date, ME?.id ?? "system", now]);
+          } catch (e) {
+            // Unknown outcome: read the exchange back by the pinned id. Found
+            // means an earlier try landed and its success path never ran, so it
+            // runs now, once. Not found, or the read failed: the id stays pinned.
+            if (!outcomeUnknown(e)) throw e;
+            let stored = null, readFailed = false;
+            try { stored = (await db(`SELECT * FROM ${T.exchanges} WHERE id = ?`, [id])).rows?.[0] ?? null; }
+            catch (readErr) { console.error(readErr); readFailed = true; }
+            // The id is ours: with the read-back failed, a UNIQUE answer may be
+            // this form's own first try — "try again", not "already exists".
+            if (readFailed) throw new Error("create outcome unknown", { cause: e });
+            if (!stored) throw e;
+            console.error(e);
+            // Edited since that first try: what was stored is kept, and said so.
+            if (storedDiffers(stored, { title, details, budget_cents: budget, exchange_date: date })) note = SAVED_AS_FIRST;
+            created = stored;
+          }
+          if (host) delete host.dataset.rowId;
+          exchanges = [created, ...exchanges.filter(x => x.id !== id)];
           currentExchangeId = id;
-          notify(`🎁 New gift exchange: ${title}`, "Tap to join before the draw!", "all", id);
-          // Outside no rollback of its own: the INSERT has committed, and
-          // publishEvent is already best-effort, so a failed publish must not
-          // unwind a row that exists. A dateless exchange announces nothing —
-          // the next edit that sets a date announces then.
-          await announceExchangeDate({ id, title, exchange_date: date, created_by: ME?.id });
         }
-        closeModal();
-        render();
       } catch (e) {
         if (btn) { btn.disabled = false; btn.textContent = existingId ? "Save" : "Create"; }
-        alertFailed("save the exchange", e);
+        alertFailed("save the exchange", "exchange", e);
+        return;
       }
+      if (created) {
+        notify(`🎁 New gift exchange: ${created.title}`, "Tap to join before the draw!", "all", created.id);
+        // Outside the write's catch: the INSERT has committed, so a failed
+        // publish must not read as a failed save. A dateless exchange announces
+        // nothing — the next edit that sets a date announces then.
+        try {
+          await announceExchangeDate({ id: created.id, title: created.title, exchange_date: created.exchange_date, created_by: created.created_by ?? ME?.id });
+        } catch (e) { console.error(e); }
+      }
+      if (modalEl === host) closeModal();
+      render();
+      if (note) hubAlert(note);
     };
 
     // ── Join / leave / hint ──────────────────────────────────────────────────
@@ -409,8 +460,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         participants = [...participants, { id, exchange_id: exchangeId, member_id: ME.id, visibility: "everyone", hint: null, created_at: now }];
         render();
       } catch (e) {
+        // An earlier try may have landed: found, the join is done (once).
+        const stored = await myStoredRow(T.participants, exchangeId, e);
+        if (stored) {
+          console.error(e);
+          participants = [...participants.filter(q => q.id !== stored.id), stored];
+          render();
+          return;
+        }
         if (btn) { btn.disabled = false; btn.textContent = "Join"; }
-        alertFailed("join the exchange", e);
+        alertFailed("join the exchange", "participant", stored === undefined ? new Error("join outcome unknown", { cause: e }) : e);
       }
     };
 
@@ -420,10 +479,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!p) return;
       if (!(await hubConfirm({ message: "Leave this exchange?", confirmLabel: "Leave" }))) return;
       try {
-        await db(`DELETE FROM ${T.participants} WHERE id = ?`, [p.id]);
+        await mustChange(await db(`DELETE FROM ${T.participants} WHERE id = ?`, [p.id]), T.participants, p.id);
         participants = participants.filter(q => q.id !== p.id);
         render();
-      } catch (e) { alertFailed("leave the exchange", e); }
+      } catch (e) { alertFailed("leave the exchange", "participant", e); }
     };
 
     window.saveHint = async function(exchangeId) {
@@ -433,13 +492,13 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const btn = document.getElementById("hint-btn");
       if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
       try {
-        await db(`UPDATE ${T.participants} SET hint = ? WHERE id = ?`, [hint, p.id]);
+        await mustChange(await db(`UPDATE ${T.participants} SET hint = ? WHERE id = ?`, [hint, p.id]), T.participants, p.id);
         const i = participants.findIndex(q => q.id === p.id);
         if (i !== -1) participants[i] = { ...participants[i], hint };
         render();
       } catch (e) {
         if (btn) { btn.disabled = false; btn.textContent = "Save hint"; }
-        alertFailed("save your hint", e);
+        alertFailed("save your hint", "participant", e);
       }
     };
 
@@ -475,13 +534,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           // A refusal the hub names carries this app's own wording; anything
           // else (an outage, an unnamed error) gets the fixed line.
           const msg = drawFailureMessage({ ...json, error: null }, id => memberMap.get(id)?.name);
-          throw Object.assign(new Error(msg), { forUser: msg !== "Draw failed." });
+          throw Object.assign(new Error(msg), { forUser: msg !== "Draw failed.", status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
         }
 
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "drawn", drawn_at: new Date().toISOString() };
         // Pick up my own assignment row — the only one the server lets me read.
-        await refreshAssignments();
+        // The draw is stored: a failed re-read is logged, not reported as a failed draw.
+        await refreshAssignments().catch(e => console.error("[secret-santa] reload after draw failed:", e));
         render();
         if (json.excluded_member_ids?.length) {
           hubAlert(`${json.excluded_member_ids.length} participant(s) who left the household were skipped.`);
@@ -504,7 +564,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       } catch (e) {
         console.error("[secret-santa] draw failed:", e);
         if (e?.forUser) hubAlert("The draw didn’t complete.", { description: `${e.message} — run the draw again to retry.` });
-        else hubAlert("Couldn’t run the draw — try again.");
+        else hubAlert(failureLine(e, { action: "run the draw", thing: "exchange" }));
       }
     };
 
@@ -531,7 +591,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         render();
       } catch (e) {
         if (btn) btn.disabled = false;
-        alertFailed("save the rule", e);
+        alertFailed("save the rule", "rule", e);
       }
     };
 
@@ -541,10 +601,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!rule || !x || !canEditExclusions(x)) return;
       if (demo) { hubAlert("Demo mode — install in your hub to edit rules."); return; }
       try {
-        await db(`DELETE FROM ${T.exclusions} WHERE id = ?`, [exclusionId]);
+        await mustChange(await db(`DELETE FROM ${T.exclusions} WHERE id = ?`, [exclusionId]), T.exclusions, exclusionId);
         exclusions = exclusions.filter(e => e.id !== exclusionId);
         render();
-      } catch (e) { alertFailed("remove the rule", e); }
+      } catch (e) { alertFailed("remove the rule", "rule", e); }
     };
 
     // ── Reveal / archive / delete ────────────────────────────────────────────
@@ -562,13 +622,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!ok) return;
       try {
         const now = new Date().toISOString();
-        await db(`UPDATE ${T.exchanges} SET status = 'revealed', revealed_at = ? WHERE id = ?`, [now, exchangeId]);
+        await mustChange(await db(`UPDATE ${T.exchanges} SET status = 'revealed', revealed_at = ? WHERE id = ?`, [now, exchangeId]), T.exchanges, exchangeId);
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "revealed", revealed_at: now };
-        await refreshAssignments();
+        // The reveal is stored: a failed re-read is logged, not reported as a failed reveal.
+        await refreshAssignments().catch(e => console.error("[secret-santa] reload after reveal failed:", e));
         render();
         notify(`🎉 The big reveal: ${x.title}`, "Come see who had whom!", participantsOf(x).map(p => p.member_id), exchangeId);
-      } catch (e) { alertFailed("reveal the exchange", e); }
+      } catch (e) { alertFailed("reveal the exchange", "exchange", e); }
     };
 
     window.archiveExchange = async function(exchangeId) {
@@ -576,7 +637,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!(await hubConfirm({ message: "Archive this exchange?", confirmLabel: "Archive" }))) return;
       try {
         const x = exchangeById(exchangeId);
-        await db(`UPDATE ${T.exchanges} SET status = 'archived' WHERE id = ?`, [exchangeId]);
+        await mustChange(await db(`UPDATE ${T.exchanges} SET status = 'archived' WHERE id = ?`, [exchangeId]), T.exchanges, exchangeId);
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "archived" };
         currentExchangeId = null;
@@ -585,7 +646,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         // calendar. Only if it had one to begin with — a dateless exchange
         // never announced, and retracting for it would spend a run on nothing.
         if (x && wantsCalendarEntry(x)) await retractExchangeDate(x, "archived");
-      } catch (e) { alertFailed("archive the exchange", e); }
+      } catch (e) { alertFailed("archive the exchange", "exchange", e); }
     };
 
     window.deleteExchange = async function(exchangeId) {
@@ -612,9 +673,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error(json.error || `Cleanup failed (${res.status})`);
+          throw Object.assign(new Error(typeof json?.error === "string" ? json.error : `Cleanup failed (${res.status})`),
+            { status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
         }
-        await db(`DELETE FROM ${T.exchanges} WHERE id = ?`, [exchangeId]);
+        await mustChange(await db(`DELETE FROM ${T.exchanges} WHERE id = ?`, [exchangeId]), T.exchanges, exchangeId);
         exchanges = exchanges.filter(e => e.id !== exchangeId);
         assignments = assignments.filter(a => a.exchange_id !== exchangeId);
         currentExchangeId = null;
@@ -622,7 +684,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         // Same retraction as archiving, and it matters more here: the row is
         // gone, so nothing in this app will ever mention that day again.
         if (wantsCalendarEntry(x)) await retractExchangeDate(x, "deleted");
-      } catch (e) { alertFailed("delete the exchange", e); }
+      } catch (e) { alertFailed("delete the exchange", "exchange", e); }
     };
 
     // ── Private gift notes ───────────────────────────────────────────────────
@@ -635,19 +697,34 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         const existing = myNote({ id: exchangeId });
         const now = new Date().toISOString();
         if (existing) {
-          await db(`UPDATE ${T.giftNotes} SET body = ?, updated_at = ? WHERE id = ?`, [body, now, existing.id]);
+          await mustChange(await db(`UPDATE ${T.giftNotes} SET body = ?, updated_at = ? WHERE id = ?`, [body, now, existing.id]), T.giftNotes, existing.id);
           const i = giftNotes.findIndex(n => n.id === existing.id);
           if (i !== -1) giftNotes[i] = { ...giftNotes[i], body, updated_at: now };
         } else {
           const id = crypto.randomUUID();
-          await db(`INSERT INTO ${T.giftNotes} (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, exchangeId, ME.id, body, now, now]);
-          giftNotes = [...giftNotes, { id, exchange_id: exchangeId, member_id: ME.id, body, created_at: now, updated_at: now }];
+          try {
+            await db(`INSERT INTO ${T.giftNotes} (id, exchange_id, member_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+              [id, exchangeId, ME.id, body, now, now]);
+            giftNotes = [...giftNotes, { id, exchange_id: exchangeId, member_id: ME.id, body, created_at: now, updated_at: now }];
+          } catch (e) {
+            // An earlier try may have landed: found, it is this member's note,
+            // and what was typed since is saved over it as an ordinary edit.
+            const stored = await myStoredRow(T.giftNotes, exchangeId, e);
+            if (stored === undefined) throw new Error("note outcome unknown", { cause: e });
+            if (!stored) throw e;
+            console.error(e);
+            let note = stored;
+            if ((stored.body ?? null) !== body) {
+              await mustChange(await db(`UPDATE ${T.giftNotes} SET body = ?, updated_at = ? WHERE id = ?`, [body, now, stored.id]), T.giftNotes, stored.id);
+              note = { ...stored, body, updated_at: now };
+            }
+            giftNotes = [...giftNotes.filter(n => n.id !== stored.id), note];
+          }
         }
         if (btn) { btn.disabled = false; btn.textContent = "Saved ✓"; setTimeout(() => { if (btn.isConnected) btn.textContent = "Save note"; }, 1500); }
       } catch (e) {
         if (btn) { btn.disabled = false; btn.textContent = "Save note"; }
-        alertFailed("save your note", e);
+        alertFailed("save your note", "note", e);
       }
     };
 
