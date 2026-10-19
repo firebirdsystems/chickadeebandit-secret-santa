@@ -8,8 +8,23 @@ export const STATUS_LABELS = {
   archived: "Archived",
 };
 
+/**
+ * Archiving is the app's own column, not a status: the hub owns `status` (the
+ * secret_draw endpoints are its only writers), because the reveal is what
+ * releases every pairing.
+ */
+export function isArchived(exchange) {
+  return !!exchange?.archived_at;
+}
+
+/** The chip class / label key: archived wins over whatever status it ended in. */
+export function statusKey(exchange) {
+  return isArchived(exchange) ? "archived" : exchange?.status ?? "";
+}
+
 export function statusLabel(exchange) {
-  return STATUS_LABELS[exchange?.status] ?? exchange?.status ?? "";
+  const key = statusKey(exchange);
+  return STATUS_LABELS[key] ?? key;
 }
 
 /** Mirrors the adult_writable policy on exchanges and the secret_draw write_acl. */
@@ -17,13 +32,24 @@ export function canManageExchange(member) {
   return isAdult(member);
 }
 
+/**
+ * Only the exchange's creator reveals — mirrors secret_draw.reveal_member_column
+ * ("created_by"), which the hub enforces; created_by is closed to app updates.
+ * Once the creator has left the household, or is no longer an adult, any adult
+ * may, as the hub allows — or the exchange could never be revealed.
+ */
+export function canRevealExchange(exchange, member, creatorCanReveal = true) {
+  return isAdult(member) && !!exchange && exchange.status === "drawn" && !isArchived(exchange)
+    && (exchange.created_by === member.id || !creatorCanReveal);
+}
+
 export function canJoin(exchange, participants, member) {
-  if (!member || !exchange || exchange.status !== "open") return false;
+  if (!member || !exchange || exchange.status !== "open" || isArchived(exchange)) return false;
   return !participants.some(p => p.exchange_id === exchange.id && p.member_id === member.id);
 }
 
 export function canLeave(exchange, participants, member) {
-  if (!member || !exchange || exchange.status !== "open") return false;
+  if (!member || !exchange || exchange.status !== "open" || isArchived(exchange)) return false;
   return participants.some(p => p.exchange_id === exchange.id && p.member_id === member.id);
 }
 
@@ -63,7 +89,7 @@ export function drawError(participantIds) {
 // edited until the exchange is revealed — a re-draw honours the current rules.
 
 export function canEditExclusions(exchange, member) {
-  return isAdult(member) && (exchange?.status === "open" || exchange?.status === "drawn");
+  return isAdult(member) && !isArchived(exchange) && (exchange?.status === "open" || exchange?.status === "drawn");
 }
 
 export function exclusionsOf(exchange, exclusions) {

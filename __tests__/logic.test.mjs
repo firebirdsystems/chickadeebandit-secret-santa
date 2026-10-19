@@ -11,6 +11,7 @@ import {
   canEditExclusions, exclusionsOf, pairKey, isExcludedPair, exclusionError,
   drawFailureMessage,
   wantsCalendarEntry, exchangeCalendarInputsChanged,
+  isArchived, statusKey, canRevealExchange,
 } from "../src/logic.js";
 
 const adult = { id: "a1", name: "Alex", role: "adult" };
@@ -197,5 +198,50 @@ describe("exchangeCalendarInputsChanged", () => {
     const dateless = { ...base, exchange_date: null };
     expect(exchangeCalendarInputsChanged(dateless, base) && wantsCalendarEntry(base)).toBe(true);
     expect(exchangeCalendarInputsChanged(base, dateless) && wantsCalendarEntry(base) && !wantsCalendarEntry(dateless)).toBe(true);
+  });
+});
+
+// Archiving is the app's own archived_at column: the hub owns `status`, which
+// is what releases the sealed assignments.
+describe("archived exchanges", () => {
+  const open = { id: "x", status: "open" };
+  const archived = { ...open, archived_at: "2026-12-26T00:00:00.000Z" };
+
+  it("archives by archived_at, whatever status it ended in", () => {
+    expect(isArchived(open)).toBe(false);
+    expect(isArchived(archived)).toBe(true);
+    expect(statusKey(archived)).toBe("archived");
+    expect(statusLabel(archived)).toBe("Archived");
+    expect(statusLabel({ status: "revealed", archived_at: "t" })).toBe("Archived");
+    expect(statusKey({ status: "drawn" })).toBe("drawn");
+  });
+
+  it("closes joining, leaving and the don't-pair rules once archived", () => {
+    expect(canJoin(open, [], adult)).toBe(true);
+    expect(canJoin(archived, [], adult)).toBe(false);
+    expect(canLeave(archived, [{ exchange_id: "x", member_id: adult.id }], adult)).toBe(false);
+    expect(canEditExclusions(archived, adult)).toBe(false);
+  });
+});
+
+// Mirrors secret_draw.reveal_member_column: the hub refuses anyone else.
+describe("canRevealExchange", () => {
+  const drawn = { id: "x", status: "drawn", created_by: adult.id };
+
+  it("lets only the adult who created a drawn exchange reveal it", () => {
+    expect(canRevealExchange(drawn, adult)).toBe(true);
+    expect(canRevealExchange(drawn, { ...adult, id: "a2" })).toBe(false);
+    expect(canRevealExchange({ ...drawn, created_by: child.id }, child)).toBe(false);
+    expect(canRevealExchange({ ...drawn, status: "open" }, adult)).toBe(false);
+    expect(canRevealExchange({ ...drawn, status: "revealed" }, adult)).toBe(false);
+    expect(canRevealExchange({ ...drawn, archived_at: "t" }, adult)).toBe(false);
+    expect(canRevealExchange(drawn, null)).toBe(false);
+  });
+
+  it("lets any adult reveal once the creator has left or is no longer an adult, as the hub does", () => {
+    const other = { ...adult, id: "a2" };
+    expect(canRevealExchange(drawn, other, false)).toBe(true);
+    expect(canRevealExchange({ ...drawn, created_by: "gone" }, child, false)).toBe(false);
+    expect(canRevealExchange({ ...drawn, status: "open" }, other, false)).toBe(false);
   });
 });

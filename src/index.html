@@ -123,7 +123,7 @@
     import {
       canManageExchange as _canManage, canJoin as _canJoin, canLeave as _canLeave,
       myParticipant as _myParticipant, myAssignment as _myAssignment,
-      drawError, statusLabel, fmtBudget, parseBudgetInput, searchableFields,
+      drawError, statusLabel, statusKey, isArchived, canRevealExchange, isAdult, fmtBudget, parseBudgetInput, searchableFields,
       canEditExclusions as _canEditExclusions, exclusionsOf as _exclusionsOf, exclusionError,
       drawFailureMessage,
       wantsCalendarEntry, exchangeCalendarInputsChanged,
@@ -319,6 +319,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     const canEditExclusions = x => _canEditExclusions(x, ME);
 
     function memberName(id) { return memberMap.get(id)?.name ?? "Former member"; }
+    // The creator alone reveals, unless they have left or are no longer an
+    // adult (the hub's write_acl), as the hub allows. An unloaded roster proves
+    // nothing, so it counts as "still able" (the hub decides anyway).
+    function creatorCanReveal(x) { return members.length === 0 || isAdult(memberMap.get(x.created_by)); }
 
     function avatarHtml(id) {
       const m = memberMap.get(id);
@@ -405,7 +409,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           const id = host ? (host.dataset.rowId ||= crypto.randomUUID()) : crypto.randomUUID();
           created = { id, title, details, budget_cents: budget, exchange_date: date, status: "open", created_by: ME?.id, created_at: now };
           try {
-            await db(`INSERT INTO ${T.exchanges} (id, title, details, budget_cents, exchange_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
+            // No status: it starts 'open' by its column default, and only the
+            // hub's secret_draw endpoints may ever write it.
+            await db(`INSERT INTO ${T.exchanges} (id, title, details, budget_cents, exchange_date, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
               [id, title, details, budget, date, ME?.id ?? "system", now]);
           } catch (e) {
             // Unknown outcome: read the exchange back by the pinned id. Found
@@ -608,12 +614,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     };
 
     // ── Reveal / archive / delete ────────────────────────────────────────────
-    // Flipping the status to 'revealed' releases the sealed_until policy on the
-    // assignments table itself: everyone immediately reads the authoritative
-    // pairings — nothing is self-reported, and nothing waits on other members.
+    // The reveal releases the sealed_until policy on the assignments table:
+    // everyone immediately reads the authoritative pairings. Only the hub moves
+    // the status (api/secret-draw/reveal, drawn → revealed, one way), and only
+    // for the exchange's creator — app SQL can't write it, so nobody can flip
+    // it, read the pairings, and flip it back.
     window.revealExchange = async function(exchangeId) {
       const x = exchangeById(exchangeId);
-      if (!x || !canManage()) return;
+      if (!x || !canRevealExchange(x, ME, creatorCanReveal(x))) return;
       const ok = await hubConfirm({
         message: "Reveal who had whom?",
         description: "Everyone immediately sees all the pairings. This can't be undone.",
@@ -622,7 +630,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!ok) return;
       try {
         const now = new Date().toISOString();
-        await mustChange(await db(`UPDATE ${T.exchanges} SET status = 'revealed', revealed_at = ? WHERE id = ?`, [now, exchangeId]), T.exchanges, exchangeId);
+        const res = await fetch("api/secret-draw/reveal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope_id: exchangeId }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw Object.assign(new Error(typeof json?.error === "string" ? json.error : `Reveal failed (${res.status})`),
+            { status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
+        }
         const i = exchanges.findIndex(e => e.id === exchangeId);
         if (i !== -1) exchanges[i] = { ...exchanges[i], status: "revealed", revealed_at: now };
         // The reveal is stored: a failed re-read is logged, not reported as a failed reveal.
@@ -637,9 +654,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!(await hubConfirm({ message: "Archive this exchange?", confirmLabel: "Archive" }))) return;
       try {
         const x = exchangeById(exchangeId);
-        await mustChange(await db(`UPDATE ${T.exchanges} SET status = 'archived' WHERE id = ?`, [exchangeId]), T.exchanges, exchangeId);
+        const now = new Date().toISOString();
+        await mustChange(await db(`UPDATE ${T.exchanges} SET archived_at = ? WHERE id = ?`, [now, exchangeId]), T.exchanges, exchangeId);
         const i = exchanges.findIndex(e => e.id === exchangeId);
-        if (i !== -1) exchanges[i] = { ...exchanges[i], status: "archived" };
+        if (i !== -1) exchanges[i] = { ...exchanges[i], archived_at: now };
         currentExchangeId = null;
         render();
         // An archived exchange is over, so its day stops standing on the shared
@@ -757,8 +775,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
 
     function renderList() {
       const matched = searchQ ? exchanges.filter(x => searchMatch(searchQ, searchableFields(x))) : exchanges;
-      const active = matched.filter(x => x.status !== "archived");
-      const archived = matched.filter(x => x.status === "archived");
+      const active = matched.filter(x => !isArchived(x));
+      const archived = matched.filter(isArchived);
       return `
         ${demo ? `<div class="banner">Demo mode — showing sample data. Install in your hub to run a real exchange.</div>` : ""}
         <div class="row spread">
@@ -796,7 +814,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         <div class="card clickable" data-testid="exchange-card" data-exchange-id="${esc(x.id)}" onclick="openExchange('${x.id}')">
           <div class="row spread">
             <strong>${esc(x.title)}</strong>
-            <span class="chip ${esc(x.status)}">${esc(statusLabel(x))}</span>
+            <span class="chip ${esc(statusKey(x))}">${esc(statusLabel(x))}</span>
           </div>
           <p class="meta" style="margin-top:6px">${esc(bits)}</p>
         </div>`;
@@ -807,6 +825,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const meIn = _myParticipant(x, participants, ME);
       const mine = _myAssignment(x, assignments, ME);
       const manage = canManage();
+      const archivedX = isArchived(x);
       const bits = [
         fmtBudget(x.budget_cents) ? `Budget: ${fmtBudget(x.budget_cents)}` : null,
         x.exchange_date ? `Exchange: ${new Date(x.exchange_date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}` : null,
@@ -816,7 +835,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         <button class="back" data-testid="exchange-back" onclick="goBack()">← All exchanges</button>
         <div class="row spread">
           <div>
-            <h1>${esc(x.title)} <span class="chip ${esc(x.status)}">${esc(statusLabel(x))}</span></h1>
+            <h1>${esc(x.title)} <span class="chip ${esc(statusKey(x))}">${esc(statusLabel(x))}</span></h1>
             ${bits ? `<p class="subtitle" style="margin-bottom:6px">${esc(bits)}</p>` : ""}
             ${x.details ? `<p class="meta">${esc(x.details)}</p>` : ""}
           </div>
@@ -835,15 +854,15 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
                 ${p.hint ? `<div class="hint-text" data-testid="participant-hint">${glyph("goal-ring")} ${esc(p.hint)}</div>` : ""}
               </div>
             </div>`).join("")}
-          ${x.status === "open" && ME ? `
+          ${x.status === "open" && !archivedX && ME ? `
             <div class="row" style="margin-top:12px">
               ${_canJoin(x, participants, ME) ? `<button class="btn" id="join-btn" data-testid="join-btn" onclick="joinExchange('${x.id}')">Join</button>` : ""}
               ${_canLeave(x, participants, ME) ? `<button class="btn ghost small" data-testid="leave-btn" onclick="leaveExchange('${x.id}')">Leave</button>` : ""}
             </div>` : ""}
-          ${x.status === "drawn" && ME && !meIn ? `<p class="meta" style="margin-top:10px">The draw already happened — you can't join this one.</p>` : ""}
+          ${x.status === "drawn" && !archivedX && ME && !meIn ? `<p class="meta" style="margin-top:10px">The draw already happened — you can't join this one.</p>` : ""}
         </div>
 
-        ${meIn && x.status !== "archived" ? `
+        ${meIn && !archivedX ? `
           <div class="section-title">Your gift hint <span class="meta" style="font-weight:400">(visible to everyone)</span></div>
           <div class="card">
             <textarea id="f-hint" data-testid="field-hint" maxlength="200" placeholder="Sizes, favorite things, allergies… help your Santa out!">${meIn.hint ? esc(meIn.hint) : ""}</textarea>
@@ -856,15 +875,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <div class="section-title">Organizer</div>
           <div class="card">
             <div class="row">
-              ${x.status === "open" ? `<button class="btn" data-testid="draw-btn" onclick="runDraw('${x.id}', false)">${glyph("dice", { accent: "currentColor" })} Draw names</button>` : ""}
-              ${x.status === "drawn" ? `
-                <button class="btn" data-testid="reveal-btn" onclick="revealExchange('${x.id}')">${glyph("party", { accent: "currentColor" })} Reveal pairings</button>
+              ${x.status === "open" && !archivedX ? `<button class="btn" data-testid="draw-btn" onclick="runDraw('${x.id}', false)">${glyph("dice", { accent: "currentColor" })} Draw names</button>` : ""}
+              ${x.status === "drawn" && !archivedX ? `
+                ${canRevealExchange(x, ME, creatorCanReveal(x)) ? `<button class="btn" data-testid="reveal-btn" onclick="revealExchange('${x.id}')">${glyph("party", { accent: "currentColor" })} Reveal pairings</button>` : ""}
                 <button class="btn ghost" data-testid="redraw-btn" onclick="runDraw('${x.id}', true)">Re-draw</button>` : ""}
-              ${x.status !== "archived" ? `<button class="btn ghost" onclick="openExchangeModal('${x.id}')">Edit</button>` : ""}
-              ${x.status !== "archived" ? `<button class="btn ghost" onclick="archiveExchange('${x.id}')">Archive</button>` : ""}
+              ${!archivedX ? `<button class="btn ghost" onclick="openExchangeModal('${x.id}')">Edit</button>` : ""}
+              ${!archivedX ? `<button class="btn ghost" onclick="archiveExchange('${x.id}')">Archive</button>` : ""}
               <button class="btn danger" onclick="deleteExchange('${x.id}')">Delete</button>
             </div>
-            ${x.status === "open" ? `<p class="meta" style="margin-top:10px">Names are matched on the server and each person can only ever read their own — no one (you included) can see who has whom.</p>` : ""}
+            ${x.status === "open" && !archivedX ? `<p class="meta" style="margin-top:10px">Names are matched on the server and each person can only ever read their own — no one (you included) can see who has whom.</p>` : ""}
+            ${x.status === "drawn" && !archivedX && !canRevealExchange(x, ME, creatorCanReveal(x)) ? `<p class="meta" style="margin-top:10px">${esc(memberName(x.created_by))} started this exchange and is the one who reveals the pairings.</p>` : ""}
           </div>` : ""}
       `;
     }
@@ -900,7 +920,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     }
 
     function renderAssignmentCard(x, mine) {
-      if (x.status === "open" || x.status === "archived") return "";
+      if (x.status === "open" || isArchived(x)) return "";
       if (!ME || !_myParticipant(x, participants, ME)) return "";
       if (!mine) return `<div class="card"><p class="meta">The draw is done, but your assignment isn't loading. Try refreshing.</p></div>`;
       const r = memberMap.get(mine.receiver_id);

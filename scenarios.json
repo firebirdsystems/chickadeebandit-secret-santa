@@ -85,6 +85,15 @@
           }
         },
         {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_secret_santa__exchanges SET status = 'revealed' WHERE id = 'ex1'",
+          "expect": {
+            "status": 403,
+            "errorIncludes": "status"
+          }
+        },
+        {
           "action": "seedRaw",
           "sql": "UPDATE app_secret_santa__exchanges SET status = 'revealed', revealed_at = '2026-01-03T00:00:00Z' WHERE id = 'ex1'"
         },

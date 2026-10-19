@@ -79,7 +79,12 @@
   },
   "row_policies": {
     "exchanges": {
-      "kind": "adult_writable"
+      "kind": "adult_writable",
+      "column_write_acls": {
+        "id": { "writable_by": [], "actions": ["update"] },
+        "status": { "writable_by": [] },
+        "created_by": { "writable_by": [], "actions": ["update"] }
+      }
     },
     "participants": {
       "kind": "owner_or_visibility",
@@ -149,6 +154,10 @@
     ],
     "drawn_status_value": "drawn",
     "drawn_at_column": "drawn_at",
+    "revealed_status_value": "revealed",
+    "revealed_at_column": "revealed_at",
+    "reveal_member_column": "created_by",
+    "closed_at_column": "archived_at",
     "participant_table": "participants",
     "participant_scope_column": "exchange_id",
     "participant_member_column": "member_id",
