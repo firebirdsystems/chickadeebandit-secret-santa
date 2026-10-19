@@ -677,23 +677,11 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       });
       if (!ok) return;
       try {
-        // Assignments are endpoint-written; app SQL can't touch them. The clear
-        // endpoint also works if the exchange row is already gone (orphan
-        // cleanup), so a retry after a later failure is safe. Participants and
-        // gift notes go with the exchange via manifest delete_cascades — neither
-        // could be deleted here: participants is write_owner_only and gift_notes
-        // is owner_only with adults_bypass off, so another member's rows were
-        // unreachable by anyone once the parent was gone.
-        const res = await fetch("api/secret-draw/clear", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scope_id: exchangeId }),
-        });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(typeof json?.error === "string" ? json.error : `Cleanup failed (${res.status})`),
-            { status: res.status, code: typeof json?.code === "string" ? json.code : undefined });
-        }
+        // One DELETE: manifest delete_cascades takes the assignments, the
+        // participants and the gift notes with the exchange, in the same
+        // transaction. None could be deleted here: assignments are written by
+        // the hub's draw, participants is write_owner_only and gift_notes is
+        // owner_only with adults_bypass off.
         await mustChange(await db(`DELETE FROM ${T.exchanges} WHERE id = ?`, [exchangeId]), T.exchanges, exchangeId);
         exchanges = exchanges.filter(e => e.id !== exchangeId);
         assignments = assignments.filter(a => a.exchange_id !== exchangeId);

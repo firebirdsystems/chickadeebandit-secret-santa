@@ -5,6 +5,10 @@
  * write_owner_only and gift_notes is owner_only with adults_bypass off, so
  * another member's rows were unreachable by every member including the
  * organizer once the parent was gone. delete_cascades takes them with it.
+ *
+ * The assignments go too. The page clears them through the secret-draw
+ * endpoint first, but a DELETE sent straight to /api/db did not, and an
+ * exchange re-created at the same id then sealed a revealed draw again.
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -18,9 +22,10 @@ const schema = ["001_init.sql", "002_exclusions.sql"]
   .join("\n");
 
 describe("delete_cascades", () => {
-  it("declares the exchange's participants, gift notes and don't-pair rules", () => {
+  it("declares the exchange's pairings, participants, gift notes and don't-pair rules", () => {
     expect(manifest.delete_cascades).toEqual({
       exchanges: [
+        { table: "assignments", foreign_key: "exchange_id" },
         { table: "participants", foreign_key: "exchange_id" },
         { table: "gift_notes", foreign_key: "exchange_id" },
         { table: "exclusions", foreign_key: "exchange_id" },
@@ -35,11 +40,12 @@ describe("delete_cascades", () => {
     }
   });
 
-  it("covers exactly the children app SQL cannot reach for another member", () => {
+  it("covers every child app SQL cannot reach for another member", () => {
     expect(manifest.row_policies.participants.write_owner_only).toBe(true);
     expect(manifest.row_policies.gift_notes.adults_bypass).toBe(false);
-    // assignments stays out: it is endpoint_writes_only and the client clears it
-    // through the secret-draw endpoint before deleting the exchange.
-    expect(manifest.delete_cascades.exchanges.map((d) => d.table)).not.toContain("assignments");
+    // Sealed and endpoint-written: nothing but the cascade can remove them
+    // when the exchange is deleted outside the page.
+    expect(manifest.row_policies.assignments.kind).toBe("sealed_until");
+    expect(manifest.delete_cascades.exchanges.map((d) => d.table)).toContain("assignments");
   });
 });

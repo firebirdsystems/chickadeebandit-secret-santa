@@ -132,6 +132,10 @@
   "delete_cascades": {
     "exchanges": [
       {
+        "table": "assignments",
+        "foreign_key": "exchange_id"
+      },
+      {
         "table": "participants",
         "foreign_key": "exchange_id"
       },
