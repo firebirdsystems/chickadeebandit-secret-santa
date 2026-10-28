@@ -6,7 +6,7 @@
 -- exchange itself. A rule naming someone who hasn't joined is simply inert.
 --
 CREATE TABLE IF NOT EXISTS app_secret_santa__exclusions (
-  id          TEXT PRIMARY KEY,
+  id          TEXT NOT NULL PRIMARY KEY,
   exchange_id TEXT NOT NULL,
   member_a_id TEXT NOT NULL,
   member_b_id TEXT NOT NULL,

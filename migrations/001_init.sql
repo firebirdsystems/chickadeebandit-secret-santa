@@ -8,7 +8,7 @@
 -- with adults_bypass:false — private even from adults, since a note names the recipient.
 
 CREATE TABLE IF NOT EXISTS app_secret_santa__exchanges (
-  id            TEXT PRIMARY KEY,
+  id            TEXT NOT NULL PRIMARY KEY,
   title         TEXT NOT NULL,
   details       TEXT,
   budget_cents  INTEGER,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS app_secret_santa__exchanges (
 );
 
 CREATE TABLE IF NOT EXISTS app_secret_santa__participants (
-  id          TEXT PRIMARY KEY,
+  id          TEXT NOT NULL PRIMARY KEY,
   exchange_id TEXT NOT NULL,
   member_id   TEXT NOT NULL,
   visibility  TEXT NOT NULL DEFAULT 'everyone',
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS app_secret_santa__participants (
 );
 
 CREATE TABLE IF NOT EXISTS app_secret_santa__assignments (
-  id          TEXT PRIMARY KEY,
+  id          TEXT NOT NULL PRIMARY KEY,
   exchange_id TEXT NOT NULL,
   giver_id    TEXT NOT NULL,
   receiver_id TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS app_secret_santa__assignments (
 );
 
 CREATE TABLE IF NOT EXISTS app_secret_santa__gift_notes (
-  id          TEXT PRIMARY KEY,
+  id          TEXT NOT NULL PRIMARY KEY,
   exchange_id TEXT NOT NULL,
   member_id   TEXT NOT NULL,
   body        TEXT,
