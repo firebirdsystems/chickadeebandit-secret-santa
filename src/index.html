@@ -734,8 +734,13 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       }
     };
 
+    // The receiver whose card is on screen, set as the card renders. Kept here
+    // rather than in the onclick so no stored value is ever written into JS.
+    let wishlistTarget = null;
     window.openWishlist = function() {
-      window.parent.postMessage({ type: "hub:open", appId: "wishlist", params: {} }, "*");
+      // Wish List opens this member's list when `member` names someone it shows.
+      const params = wishlistTarget ? { member: wishlistTarget } : {};
+      window.parent.postMessage({ type: "hub:open", appId: "wishlist", params }, "*");
     };
 
     window.openExchange = function(id) {
@@ -912,6 +917,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (!ME || !_myParticipant(x, participants, ME)) return "";
       if (!mine) return `<div class="card"><p class="meta">The draw is done, but your assignment isn't loading. Try refreshing.</p></div>`;
       const r = memberMap.get(mine.receiver_id);
+      // A receiver who has left has no list to open.
+      wishlistTarget = r ? mine.receiver_id : null;
       const hint = participantsOf(x).find(p => p.member_id === mine.receiver_id)?.hint;
       const note = myNote(x);
       return `
@@ -920,9 +927,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <div class="assignment-name" data-testid="assignment-name">${glyph("gift")} ${esc(r?.name ?? "Former member")}</div>
           ${fmtBudget(x.budget_cents) ? `<div class="meta">Keep it around ${esc(fmtBudget(x.budget_cents))}</div>` : ""}
           ${hint ? `<div class="hint-text" data-testid="assignment-hint" style="margin-top:8px">${glyph("goal-ring")} Their hint: ${esc(hint)}</div>` : ""}
-          <div class="row" style="justify-content:center;margin-top:14px">
+          ${r ? `<div class="row" style="justify-content:center;margin-top:14px">
             <button class="btn ghost small" onclick="openWishlist()">Browse their Wish List</button>
-          </div>
+          </div>` : ""}
         </div>
         <div class="section-title">Private gift ideas <span class="meta" style="font-weight:400">(only you can see this)</span></div>
         <div class="card">
